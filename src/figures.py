@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 
 # Project-wide style. Importing the module also applies the rcParams.
-from src.style import apply_style, PALETTE, SEMANTIC
+from src.style import apply_style, PALETTE, PALETTE_WARM, SEMANTIC
 
 apply_style()
 
@@ -113,12 +113,12 @@ def plot_headline_summary(out_path: Path) -> None:
         edgecolor="black", linewidth=0.5,
     )
     axes[1].axvline(
-        cv["accuracy_mean"], color=COLORS["primary"],
-        linestyle="--", linewidth=2.5,
+        cv["accuracy_mean"], color=PALETTE_WARM["accent"],
+        linestyle="--", linewidth=2.8,
         label=f"Observed ({cv['accuracy_mean']:.3f})",
     )
     axes[1].axvline(
-        0.693, color=COLORS["secondary"],
+        0.693, color=PALETTE_WARM["dark"],
         linestyle=":", linewidth=2,
         label="Class-prior (0.693)",
     )
@@ -396,9 +396,17 @@ def plot_roc(out_path: Path) -> None:
     roc_auc = auc(fpr, tpr)
 
     fig, ax = plt.subplots(figsize=(7, 6))
-    ax.plot(fpr, tpr, color=COLORS["primary"], linewidth=2.5, label=f"Random Forest (AUC = {roc_auc:.3f})")
-    ax.plot([0, 1], [0, 1], color=COLORS["grey"], linestyle=":", label="chance (AUC = 0.500)")
-    ax.fill_between(fpr, 0, tpr, color=COLORS["primary"], alpha=0.1)
+    # Use the warm palette here: the bow (ROC curve) needs a high-contrast
+    # accent color. Prussian Blue is too dark and gets lost against the
+    # area fill. Red-orange (#EC5B38) on cream reads cleanly.
+    from src.style import PALETTE_WARM
+    ax.plot(fpr, tpr, color=PALETTE_WARM["accent"], linewidth=2.8,
+            label=f"Random Forest (AUC = {roc_auc:.3f})")
+    ax.plot([0, 1], [0, 1], color=PALETTE_WARM["tan"], linestyle=":",
+            linewidth=1.5, label="chance (AUC = 0.500)")
+    ax.fill_between(fpr, 0, tpr, color=PALETTE_WARM["accent"], alpha=0.12)
+    # Cream-toned background for this figure, so the red-orange bow pops.
+    ax.set_facecolor(PALETTE_WARM["cream"])
     ax.set_xlabel("False positive rate")
     ax.set_ylabel("True positive rate")
     ax.set_title("ROC curve — Random Forest on FinancialPhraseBank binary\n"
