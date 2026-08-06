@@ -41,7 +41,7 @@ Questions and discussion welcome.
 
 ## First comment
 
-> Full paper, code, 33 unit tests, and all figures: [FILL IN GITHUB URL AFTER PUSH]
+> Full paper, code, 33 unit tests, and all figures: https://github.com/1AL1-DATA/letter-valence-research
 >
 > To reproduce: `pip install -r requirements.txt && python -m src.analyze && python -m src.visualise && python -m src.train_final`
 >
