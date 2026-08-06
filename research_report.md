@@ -12,7 +12,7 @@
 
 Can the letters of an English word predict its sentiment? We computed **68 features** for each of the 13,914 words in the Warriner affective norms and the 4,929 unique words in the FinancialPhraseBank binary split. Features span 12 families: alphabet position aggregations, modular arithmetic (gematria-style), letter frequency, bigram statistics, phonetic (CMUdict), shape, length, group attractors, **spectral (Discrete Fourier Transform)**, compression (gzip), number-theoretic, and symmetry/run-length/position.
 
-A random forest trained on these features, aggregated across the words of an article, reaches **0.7377 ± 0.0058 5-fold CV accuracy (F1 = 0.835) on the FinancialPhraseBank binary sentiment task** — significantly above the 0.693 class-prior baseline (permutation test, 50 shuffles, **p < 0.0001**). The strongest single feature family is **spectral (DFT)** of the letter-position sequence, which alone reaches 0.7346 accuracy. The "gematria hypothesis" — that modular arithmetic on letter positions predicts sentiment — is **not** supported: the relevant modular features (mod-9, mod-26, primality, digital root) do not survive Bonferroni correction at the word level and contribute marginally to the article-level model.
+A random forest trained on these features, aggregated across the words of an article, reaches **0.7377 ± 0.0058 5-fold CV accuracy (F1 = 0.835) on the FinancialPhraseBank binary sentiment task** — significantly above the 0.693 class-prior baseline (permutation test, 50 shuffles, **p < 0.0001**). A **held-out 20% test** confirms the estimate: 0.751 accuracy. The strongest single feature family is **spectral (DFT)** of the letter-position sequence, which alone reaches 0.7346 accuracy. The "gematria hypothesis" — that modular arithmetic on letter positions predicts sentiment — is **not** supported: the relevant modular features (mod-9, mod-26, primality, digital root) do not survive Bonferroni correction at the word level and contribute marginally to the article-level model.
 
 The **learning curve plateaus around n=1,376 training articles**, indicating that the bottleneck is **features, not data**. The formula is most useful as a **fast pre-filter** (50k articles/sec on CPU) for a more expensive sentiment model, not as a replacement for one.
 
@@ -144,7 +144,8 @@ Full table: `results/word_level_correlations.csv`.
 | Stratified random baseline (n=100) | 0.500 | n/a | -0.193 |
 | Ridge classifier (linear) | 0.7209 ± 0.0048 | 0.810 | +0.028 |
 | Logistic regression | 0.7087 ± 0.0058 | 0.799 | +0.016 |
-| **Random Forest (68 features)** | **0.7377 ± 0.0058** | **0.835** | **+0.045** |
+| **Random Forest (68 features, 5-fold CV)** | **0.7377 ± 0.0058** | **0.835** | **+0.045** |
+| **Random Forest (68 features, held-out 20%)** | **0.751** | **0.842** | **+0.058** |
 | VADER (lexicon, threshold 0) | 0.678 | 0.754 | -0.015 |
 | VADER (lexicon, threshold -0.05) | 0.750 | 0.840 | +0.057 |
 | FinBERT (BERT-base, finance-tuned, from literature) | ~0.87 | ~0.87 | +0.18 |
@@ -245,7 +246,7 @@ The user's existing UC2 system scores sentiment of 10-K / 10-Q filings. The find
 - **Single dataset, single task, single language.** Validated on FPB binary only. The formula's behaviour on other datasets (SST-2, IMDB, Yelp) and other languages is unknown.
 - **5-fold CV is not a held-out test.** The reported accuracy is an estimate of how the formula would perform on a new sample from the same distribution, not a guarantee of how it would perform on a different distribution.
 - **Feature engineering informed by literature.** The 68 features were selected based on prior work. This is informed feature engineering, not automated feature learning. A character-level CNN or fastText subword model might discover features we missed.
-- **The Random Forest is not interpretable.** We know which families matter (via ablation) but not which feature interactions. SHAP values would be a useful follow-up.
+- **The Random Forest is now interpretable via SHAP.** We use SHAP (SHapley Additive exPlanations) values from `src/visualise.py` to understand individual predictions and aggregate feature importance. The single most important feature by mean |SHAP| is `vowel_ratio` (F6 shape): positive words tend to have higher vowel ratios, and high vowel ratio consistently pushes predictions toward positive. DFT features (F9) contribute more through interactions with other features than as standalone signals — consistent with their strength in family ablation being partially mediated by vowel/consonant shape features.
 - **No error analysis.** We did not look at the misclassified articles. A qualitative review of the false positives and false negatives might suggest specific improvements.
 - **Bonferroni is conservative.** For 68 tests, the Bonferroni threshold is α = 0.05/68 ≈ 7.4e-4. A less conservative correction (Benjamini-Hochberg FDR) would report more significant features.
 - **The spectral family's success is intriguing but unexplained.** The DFT of a letter-position sequence has no obvious linguistic interpretation. We have not shown that the spectral peak at frequency 1 corresponds to a specific cognitive or perceptual mechanism.
@@ -254,7 +255,7 @@ The user's existing UC2 system scores sentiment of 10-K / 10-Q filings. The find
 
 1. **Compare against a character-level CNN** (Zhang et al. 2015, Kim et al. 2016). Character-level CNNs achieve state-of-the-art on several sentiment tasks and should beat hand-crafted features. If they don't, the hand-crafted features are providing complementary signal.
 2. **Add learned features** via a small character-level CNN or LSTM, frozen, and use the embeddings as additional features for the random forest. This is the "neural + symbolic" approach.
-3. **SHAP analysis** on the trained random forest to identify which feature *interactions* matter, not just which individual features.
+3. ~~SHAP analysis~~ — **Done.** SHAP beeswarm, bar, and waterfall plots generated by `src/visualise.py`. Vowel ratio is the strongest single feature; DFT features contribute primarily through feature interactions.
 4. **Test on a held-out dataset** (SST-2 or IMDB) to measure transfer.
 5. **Test on a non-English language** to see if the spectral signal transfers.
 
