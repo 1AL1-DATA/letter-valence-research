@@ -153,8 +153,8 @@ def make_word_fingerprints(pos_words, neg_words, n_bins=32, n_examples=8):
         axes = axes.reshape(2, 1)
 
     x = np.arange(n_bins)
-    pos_color = "#2171b5"
-    neg_color = "#cb181d"
+    pos_color = PALETTE_PRIMARY
+    neg_color = PALETTE_HIGHLIGHT
 
     for ax, word in zip(axes[0], pos_sample):
         mag, _ = dft_spectrum(word, n_bins)
