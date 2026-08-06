@@ -29,6 +29,18 @@ PALETTE = {
     "white":        "#ffffff",
 }
 
+# Warm palette — used for figures where the cool palette has poor contrast
+# (e.g. ROC curve, where a dark blue line on white is hard to read against
+# the area fill underneath). These do NOT replace the main palette; they
+# are imported into specific figures as needed.
+PALETTE_WARM = {
+    "dark":         "#524646",   # warm dark brown
+    "tan":          "#A8A492",   # warm muted tan
+    "cream":        "#FCF2E5",   # cream / paper white
+    "accent":       "#EC5B38",   # red-orange (high contrast on cream)
+    "ink":          "#2a2424",   # near-black for text on cream
+}
+
 # Convenience semantic aliases. These map chart roles to palette entries
 # so a figure can ask for "primary", "muted", etc. and we can change the
 # mapping in one place.
