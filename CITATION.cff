@@ -1,0 +1,84 @@
+cff-version: 1.2.0
+message: |
+  If you use this work in a research paper, blog post, or product, please cite it
+  as below. The BibTeX entry below is the canonical citation.
+type: software
+title: "Letter-derived numerical features of words and their correlation with sentiment"
+version: 1.0.0
+date-released: 2026-08-05
+license:
+  - id: MIT
+    url: "https://opensource.org/licenses/MIT"
+    title: "MIT License (code)"
+  - id: CC-BY-4.0
+    url: "https://creativecommons.org/licenses/by/4.0/"
+    title: "Creative Commons Attribution 4.0 International (prose, figures)"
+keywords:
+  - sentiment-analysis
+  - natural-language-processing
+  - letter-features
+  - discrete-fourier-transform
+  - sound-symbolism
+  - reproducible-research
+  - permutation-test
+  - bias-variance-analysis
+references:
+  - type: article
+    title: "Norms of valence, arousal, and dominance for 13,915 English lemmas"
+    authors:
+      - family-names: Warriner
+        given-names: Amy Beth
+      - family-names: Kuperman
+        given-names: Victor
+      - family-names: Brysbaert
+        given-names: Marc
+    journal: "Behavior Research Methods"
+    year: 2013
+    volume: "45"
+    issue: "4"
+    start: 1191
+    end: 1207
+  - type: article
+    title: "Good debt or bad debt: Detecting semantic orientations in economic texts"
+    authors:
+      - family-names: Malo
+        given-names: Pekka
+      - family-names: Sinha
+        given-names: Ankur
+      - family-names: Korhonen
+        given-names: Pekka
+      - family-names: Wallenius
+        given-names: Jyrki
+      - family-names: Takala
+        given-names: Pyry
+    journal: "Journal of the Association for Information Science and Technology"
+    year: 2014
+  - type: article
+    title: "Emotional sound symbolism: Languages rapidly signal valence via phonemes"
+    authors:
+      - family-names: Adelman
+        given-names: James S.
+      - family-names: Estes
+        given-names: Zachary
+      - family-names: Cossu
+        given-names: Martina
+    journal: "Cognition"
+    volume: "175"
+    start: 122
+    end: 130
+    year: 2018
+  - type: article
+    title: "Why 'piss' is ruder than 'pee'? The role of sound in affective meaning making"
+    authors:
+      - family-names: Aryani
+        given-names: Arash
+      - family-names: Conrad
+        given-names: Markus
+      - family-names: Schmidtke
+        given-names: David
+      - family-names: Jacobs
+        given-names: Arthur M.
+    journal: "PLoS ONE"
+    volume: "13"
+    issue: "6"
+    year: 2018
