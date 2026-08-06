@@ -24,6 +24,20 @@ sys.path.insert(0, str(REPO))
 
 from src.data import load_articles_binary
 from src.features import features as feature_one_word, get_feature_names
+from src.style import apply_style, PALETTE, SEMANTIC
+
+apply_style()
+
+# Local palette aliases for use in plots.
+PALETTE_PRIMARY   = SEMANTIC['primary']
+PALETTE_HIGHLIGHT = SEMANTIC['highlight']
+PALETTE_MUTED     = SEMANTIC['muted']
+PALETTE_TEXT      = SEMANTIC['text']
+
+# visualise.py has colorbars in some figures, which do not work with
+# constrained_layout (matplotlib raises a RuntimeError on save). Switch
+# to the classic layout engine so fig.tight_layout() calls below work.
+plt.rcParams["figure.constrained_layout.use"] = False
 
 OUT_DIR = REPO / "figures"
 OUT_DIR.mkdir(exist_ok=True)

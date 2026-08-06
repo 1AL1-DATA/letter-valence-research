@@ -17,82 +17,128 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-# Style
-plt.rcParams.update({
-    "figure.dpi": 100,
-    "savefig.dpi": 300,
-    "font.family": "DejaVu Sans",
-    "font.size": 11,
-    "axes.titlesize": 13,
-    "axes.labelsize": 11,
-    "axes.spines.top": False,
-    "axes.spines.right": False,
-    "axes.grid": True,
-    "grid.alpha": 0.3,
-    "grid.linestyle": "--",
-    "figure.constrained_layout.use": True,
-    "savefig.bbox": "tight",
-    "savefig.pad_inches": 0.15,
-    "legend.frameon": False,
-})
+# Project-wide style. Importing the module also applies the rcParams.
+from src.style import apply_style, PALETTE, SEMANTIC
+
+apply_style()
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 RESULTS_DIR = REPO_ROOT / "results"
 FIGURES_DIR = REPO_ROOT / "figures"
 FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
-# Project colour palette — ColorBrewer-inspired, printer-friendly
+# Project colour palette. Backed by src.style.PALETTE; kept here as a local
+# alias so existing call sites (e.g. COLORS["primary"]) keep working.
 COLORS = {
-    "primary":   "#2c7bb6",   # blue
-    "secondary": "#d7191c",   # red
-    "accent":    "#fdae61",   # orange
-    "neutral":   "#5e3c99",   # purple
-    "highlight": "#1a9641",   # green
-    "grey":      "#878787",
+    "primary":   SEMANTIC["primary"],
+    "secondary": SEMANTIC["primary"],
+    "accent":    SEMANTIC["secondary"],
+    "neutral":   SEMANTIC["primary"],
+    "highlight": SEMANTIC["secondary"],
+    "grey":      SEMANTIC["muted"],
 }
 
 
 # ---- 1. Headline summary figure ----
 def plot_headline_summary(out_path: Path) -> None:
-    """One-glance figure: CV accuracy vs class-prior baseline + null distribution."""
+    """One-glance figure: CV accuracy vs class-prior baseline + null distribution.
+
+    Layout notes:
+      - The suptitle is the *project title* and sits well above the subplot
+        titles. We use a wider figure and lower the suptitle y so the two
+        text elements do not collide.
+      - The right subplot's legend is anchored to the upper-left corner
+        (away from the dashed "Observed" line) and uses a frame so the
+        long labels stay readable.
+      - The left subplot's x-tick labels are rotated 15 degrees so that
+        "Random Forest (letter features, ours)" does not run into the
+        bar above it.
+    """
     cv = pd.read_csv(RESULTS_DIR / "cv_random_forest.csv").iloc[0]
     perm = pd.read_json(RESULTS_DIR / "permutation_test.json", typ="series")
-    major = (perm["null_max"] if "null_max" in perm else 0.690)
     null_mean = perm.get("null_mean", 0.684)
     null_std = perm.get("null_std", 0.004)
     pval = perm.get("p_value", 0.0)
 
-    fig, axes = plt.subplots(1, 2, figsize=(11, 4.2), gridspec_kw={"width_ratios": [1.4, 1]})
+    # Wider figure + more height so suptitle does not crowd subplot titles.
+    fig, axes = plt.subplots(
+        1, 2,
+        figsize=(13, 5.2),
+        gridspec_kw={"width_ratios": [1.4, 1]},
+    )
 
-    # Left: bar chart of baselines vs model
-    methods = ["Class-prior\n(always positive)", "Stratified\nrandom", "Logistic\nregression", "Ridge\nclassifier", "Random Forest\n(letter features, ours)"]
+    # ---- Left: bar chart of baselines vs model ----
+    methods = [
+        "Class-prior\n(always positive)",
+        "Stratified\nrandom",
+        "Logistic\nregression",
+        "Ridge\nclassifier",
+        "Random Forest\n(letter features,\nours)",
+    ]
     accs = [0.693, 0.500, 0.709, 0.721, cv["accuracy_mean"]]
-    errs = [0.000, 0.024, cv_log := 0.006, 0.005, cv["accuracy_std"]]
-    colors = [COLORS["grey"], COLORS["grey"], COLORS["accent"], COLORS["accent"], COLORS["primary"]]
-    bars = axes[0].bar(range(len(methods)), accs, yerr=errs, color=colors, capsize=4, edgecolor="black", linewidth=0.5)
-    axes[0].axhline(0.693, color=COLORS["grey"], linestyle=":", alpha=0.5, label="class-prior baseline (0.693)")
+    errs = [0.000, 0.024, 0.006, 0.005, cv["accuracy_std"]]
+    colors = [
+        COLORS["grey"], COLORS["grey"],
+        COLORS["accent"], COLORS["accent"],
+        COLORS["primary"],
+    ]
+    bars = axes[0].bar(
+        range(len(methods)), accs, yerr=errs,
+        color=colors, capsize=4,
+        edgecolor="black", linewidth=0.5,
+    )
+    axes[0].axhline(
+        0.693, color=COLORS["grey"], linestyle=":",
+        alpha=0.6, label="class-prior baseline (0.693)",
+    )
     axes[0].set_xticks(range(len(methods)))
-    axes[0].set_xticklabels(methods, rotation=0, fontsize=9)
+    axes[0].set_xticklabels(methods, rotation=15, ha="right", fontsize=8.5)
     axes[0].set_ylabel("5-fold CV accuracy")
     axes[0].set_ylim(0.40, 0.80)
-    axes[0].set_title("Letter-feature classifier vs baselines")
+    axes[0].set_title("Letter-feature classifier vs baselines", pad=8)
     for bar, acc, err in zip(bars, accs, errs):
-        axes[0].text(bar.get_x() + bar.get_width() / 2, acc + err + 0.01,
-                     f"{acc:.3f}", ha="center", va="bottom", fontsize=8.5)
+        axes[0].text(
+            bar.get_x() + bar.get_width() / 2,
+            acc + err + 0.01,
+            f"{acc:.3f}",
+            ha="center", va="bottom", fontsize=8.5,
+        )
 
-    # Right: null distribution vs observed
+    # ---- Right: null distribution vs observed ----
     null = np.array(perm.get("null_distribution", [0.683, 0.685, 0.686]))
-    axes[1].hist(null, bins=10, color=COLORS["grey"], alpha=0.7, label="Permutation null (n=50)")
-    axes[1].axvline(cv["accuracy_mean"], color=COLORS["primary"], linestyle="--", linewidth=2.5,
-                    label=f"Observed ({cv['accuracy_mean']:.3f})")
-    axes[1].axvline(0.693, color=COLORS["secondary"], linestyle=":", linewidth=2, label="Class-prior (0.693)")
+    axes[1].hist(
+        null, bins=10,
+        color=COLORS["grey"], alpha=0.8,
+        label="Permutation null (n=50)",
+        edgecolor="black", linewidth=0.5,
+    )
+    axes[1].axvline(
+        cv["accuracy_mean"], color=COLORS["primary"],
+        linestyle="--", linewidth=2.5,
+        label=f"Observed ({cv['accuracy_mean']:.3f})",
+    )
+    axes[1].axvline(
+        0.693, color=COLORS["secondary"],
+        linestyle=":", linewidth=2,
+        label="Class-prior (0.693)",
+    )
     axes[1].set_xlabel("5-fold CV accuracy")
     axes[1].set_ylabel("Frequency (permutations)")
-    axes[1].set_title(f"Permutation test (p = {pval:.4f})")
-    axes[1].legend(loc="upper left", fontsize=9)
+    axes[1].set_title(f"Permutation test (p = {pval:.4f})", pad=8)
+    # Anchored legend inside the axes — top-left, where the data does not
+    # crowd it. Use a faint frame so long labels stay readable.
+    legend = axes[1].legend(
+        loc="upper left", fontsize=8.5,
+        frameon=True, framealpha=0.9,
+    )
+    legend.get_frame().set_edgecolor(COLORS["grey"])
 
-    fig.suptitle("Letter-derived features for sentiment classification (FinancialPhraseBank binary, n=1967)",
-                 fontsize=14, y=1.02)
+    # Suptitle — well above the subplot titles so the two never collide.
+    fig.suptitle(
+        "Letter-derived features for sentiment classification "
+        "(FinancialPhraseBank binary, n=1967)",
+        fontsize=14, y=1.04,
+    )
     fig.savefig(out_path, dpi=300)
     plt.close(fig)
     print(f"  Wrote {out_path.name}")
