@@ -162,6 +162,49 @@ A research project of moderate scope should produce 8 figures. Each has a known 
 - Black border on bars (linewidth 0.5)
 - Value labels next to each bar
 
+### Pre-render checklist (mandatory)
+
+Run through this before generating any figure. **Skipping these checks has
+caused wasted work on every project so far — the figure renders fine in the
+script, but on the page it is unreadable, and the only way to find out is to
+actually look at the saved PNG.**
+
+1. **Ask the user for the colour palette before designing any figure.**
+   Do not pick one. Do not default to ColorBrewer. Do not pick a palette
+   "based on what feels right". The project has either an explicit palette
+   in the README, in a `style.py` module, or in a design doc — read it,
+   then confirm with the user. A figure that uses the wrong palette is
+   worse than a figure with no colour at all, because it has to be
+   re-rendered.
+2. **After the first render, open the PNG and look at it.** Specifically:
+   - Title and subplot titles — do they collide?
+   - Long axis tick labels — do letters run into each other?
+   - Legend — is it inside the data area, or does it get clipped?
+   - Numbers in labels (e.g. "(0.738)") — do they get cut off at the
+     edge of the box?
+3. **Run a visual check on the `headline_summary.png` first.** This is the
+   figure that goes in the README and is most often shared on social
+   media. If the headline figure has spacing issues, every other figure
+   probably does too. Fix the headline, then re-render the rest.
+4. **Keep a single `src/style.py` module** with the palette and rcParams.
+   Every figure-generation script imports from it. This way a palette
+   change re-renders all figures in one pass, not one at a time.
+5. **If you change the palette, re-render every figure, then re-check
+   the headline.** Don't trust that because the source code changed the
+   PNG will be fine. Open it.
+
+**Common spacing fixes (if the above checks fail):**
+- Title collision → wider figure (`figsize=(13, 5.2)` instead of `(11, 4.2)`),
+  lower the suptitle (`y=1.04`), and add `pad=8` to `ax.set_title()`.
+- Long axis labels running into each other → `rotation=15, ha="right"`
+  on the x-tick labels, with `fontsize=8.5`.
+- Legend clipping → add a faint frame (`frameon=True, framealpha=0.9`)
+  and move the legend to a corner where the data does not crowd it.
+- Colorbar layout errors → `constrained_layout` does not work with
+  colorbars in older matplotlib; switch to `plt.tight_layout()` and
+  `plt.rcParams["figure.constrained_layout.use"] = False` for those
+  scripts.
+
 ---
 
 ## 7. The reproduction contract
