@@ -4,6 +4,8 @@
 
 > **TL;DR.** A random forest on 68 features computed purely from the letters of each word — alphabet position, modular arithmetic, bigram statistics, vowel/consonant ratios, phonetic features from CMUdict, spectral (DFT) analysis, compression, gematria-style encodings — reaches **0.7377 ± 0.0058 accuracy (F1 = 0.835)** on the FinancialPhraseBank binary sentiment task (5-fold CV), with a **permutation p-value < 0.0001**. A held-out 20% test gives 0.751 accuracy. The strongest single family is **spectral (DFT) features** of the letter-position sequence, which alone reaches 0.7346. Gematria-style features (mod-9, mod-26, primality, digital root) are **not** predictive after Bonferroni correction. The learning curve plateaus around n=1,376. At ~50,000 classifications per second on a CPU, the approach is fast enough to serve as an inexpensive pre-filter before a heavier model (LLM or transformer-based sentiment classifier), reducing compute cost in large-scale document ingestion.
 
+> **Cascade follow-up (2026-08-07).** When the letter model was deployed as the cheap tier of a real sentiment engine, it turned out to be **strictly dominated**: the DFT probe's max `|v|` (0.922) never clears its 0.95 threshold, and the letter RF fires on only 3.6% of sentences. A **word-level cheap tier** — TF-IDF (1–2 grams) + VADER + keyword features through a 3-class logistic regression — replaces both. In a 2-tier cascade (cheap word tier → FinancialBERT), the cheap tier decides **36.6%** of clear-polarity calls at **97.2% accuracy** and the cascade scores **0.9512** vs **0.9558** for heavy-only (McNemar p = 0.15, not significant) while cutting transformer load by a third. One-third of calls never touch the transformer. Full evaluation in `results/cascade_benchmark.json` + `src/benchmark_cascade.py`.
+
 > **This repo is also a reference implementation of a research-artifact structure.** See [TEMPLATE.md](TEMPLATE.md) for the generic 5-layer structure, the 10 mandatory files, the 6 recommended files, the 4 anti-patterns, the 6-question principled evaluation checklist, the 8 figures standard, and the 18-item readiness checklist.
 
 ![Headline chart](figures/headline_summary.png)
@@ -40,7 +42,9 @@ letter-valence-research/
 │   ├── figures.py             ← 8 PNG charts (300 dpi)
 │   ├── train_final.py         ← trains and saves the production model
 │   ├── classify.py            ← paragraph classifier (CLI + library)
-│   └── visualise.py           ← DFT + SHAP visualisation script
+│   ├── visualise.py           ← DFT + SHAP visualisation script
+│   ├── benchmark_cascade.py   ← 2-tier cascade eval (cheap word tier → heavy)
+│   └── figures_cascade.py     ← 4-panel cascade figure
 ├── tests/
 │   ├── test_features.py       ← 33 unit tests, all passing
 │   └── README.md
@@ -54,9 +58,11 @@ letter-valence-research/
 │   ├── family_ablation.csv    ← leave-one-family-out
 │   ├── single_family.csv      ← each family alone
 │   ├── permutation_test.json  ← null distribution + p-value
+│   ├── cascade_benchmark.json ← 2-tier cascade evaluation
+│   ├── cascade_predictions.csv ← per-instance component valences + routing
 │   ├── summary.json           ← machine-readable headline numbers
 │   └── SUMMARY.md             ← one-page plain-English summary
-├── figures/                   ← 13 PNG charts (300 dpi)
+├── figures/                   ← 14 PNG charts (300 dpi)
 │   ├── headline_summary.png   ← 5-model comparison bar chart
 │   ├── method_comparison.png   ← box plot of 3 classifiers
 │   ├── family_ablation.png     ← leave-one-family-out results
@@ -69,7 +75,8 @@ letter-valence-research/
 │   ├── dft_word_fingerprints.png   ← individual word DFT spectra
 │   ├── shap_beeswarm.png       ← SHAP feature attribution landscape
 │   ├── shap_bar.png            ← SHAP mean |SHAP| per feature
-│   └── shap_waterfall.png      ← SHAP waterfall: one pos + one neg example
+│   ├── shap_waterfall.png      ← SHAP waterfall: one pos + one neg example
+│   └── cascade_sentiment_eval.png ← 2-tier cascade evaluation (4 panels)
 ├── models/
 │   └── letter_sentiment_rf.pkl   ← trained RF model (3.7 MB)
 ├── docs/
@@ -104,10 +111,15 @@ python -m src.train_final
 python -m src.classify --text "The company reported record earnings."
 python -m src.classify --text "The company reported record earnings." --compare
 
-# 7. Run the tests
+# 7. Run the 2-tier cascade evaluation (cheap word tier → heavy)
+#    Requires the esg-dashboard workspace venv (FinancialBERT + sklearn).
+/home/a/esg-dashboard/.venv/bin/python -m src.benchmark_cascade
+/home/a/esg-dashboard/.venv/bin/python -m src.figures_cascade
+
+# 8. Run the tests
 python -m unittest discover tests/
 
-# 8. Walk through the visualisations
+# 9. Walk through the visualisations
 jupyter notebook notebooks/01_reproduce_main_result.ipynb
 ```
 
@@ -170,6 +182,45 @@ For the full list and exact formulas, see the docstrings in `src/features.py`.
 
 5. **Practical use case: fast pre-filter for large-scale ingestion.** At ~50,000 classifications per second on a CPU (single-threaded), the approach can pre-screen millions of documents per day. For large-scale document pipelines — scanning 10-K filings, news feeds, research reports — a lightweight letter-feature filter can reduce the volume sent to a heavier model (LLM or transformer-based sentiment classifier), cutting compute cost where the signal is clear.
 
+## The 2-tier cascade follow-up (why the letter tiers were replaced)
+
+This repository is also the evaluation home of the **sentiment cascade** used by the
+[esg-dashboard](https://github.com/1AL1-DATA/esg-dashboard) news pipeline. The original
+design had three tiers — DFT probe → letter RF → FinancialBERT. Empirically, the letter
+tiers were **strictly dominated** and effectively dead weight:
+
+- The **DFT probe** never fired on the 1,967 clear-polarity sentences: its maximum
+  `|v|` was 0.922, below the 0.95 firing threshold.
+- The **letter RF** fired on only 3.6% of sentences (71/1,967), so the heavy tier
+  silently handled 96.4% of the load anyway.
+- The letter features themselves cap at **0.7377 binary CV** (feature-bound, not
+  data-bound — the learning curve plateaus at n≈1,376), while a plain word-level
+  TF-IDF model on the same data reaches 0.79–0.84.
+
+The fix was a **word-level cheap tier**: TF-IDF (1–2 grams) + VADER compound +
+keyword valence, through a 3-class logistic regression (v = p_pos − p_neg). The
+cascade is now two tiers: **cheap word tier → FinancialBERT**, with VADER only as a
+final fallback. At the chosen operating point the cheap tier decides **when |v| ≥ 0.6**
+and routes everything else to the heavy tier:
+
+| Metric | Heavy-only | Cascade (cheap → heavy) |
+|---|---|---|
+| Clear-polarity accuracy | 0.9558 | **0.9512** |
+| Wilson 95% CI | [0.9458, 0.9640] | [0.9408, 0.9599] |
+| Negative F1 / positive F1 | 0.968 / 0.975 | 0.957 / 0.971 |
+| Macro-F1 | 0.972 | 0.964 |
+| Cheap tier share of clear calls | — | **36.6% @ 97.2% acc** |
+| False-polarity on neutral set | 4.9% | 7.7% |
+| McNemar vs heavy-only | — | **p = 0.15 (ns)** |
+
+The 0.9512 vs 0.9558 difference is **not statistically significant** (exact McNemar
+p = 0.15), but the cheap tier absorbs a third of the transformer's workload — at 1%
+of the compute — with a modest 2.8-point increase in false polarity on genuinely
+neutral sentences. **This is the "letter pre-filter" hypothesis tested to its
+conclusion: the signal is real but lives in words, not letters.** See
+`src/benchmark_cascade.py`, `results/cascade_benchmark.json`, and
+`figures/cascade_sentiment_eval.png`.
+
 ## SHAP feature attribution
 
 SHAP (SHapley Additive exPlanations) values reveal how each feature contributes to individual predictions. Three visualisations are generated by `src/visualise.py`:
@@ -205,6 +256,7 @@ We are honest about the limits:
 - The formula does **not** beat a properly-tuned VADER (0.750) or FinBERT (~0.87) on the same data. It's a complement, not a replacement.
 - The per-word R² is ~0.005. The signal is real but small. Aggregating across words is what makes it useful.
 - We have not tested whether the formula transfers to **non-English** languages. The CMUdict is English-only, and the bigram frequencies are English.
+- **Letter features lose to words.** In the cascade evaluation (above), a word-level TF-IDF cheap tier strictly dominates the letter features as a pre-filter: the DFT probe never fires, and the letter RF fires on 3.6% of sentences. The letter research remains a valid psycholinguistic finding; it just is not the right cheap tier for a production engine.
 
 ## License
 
@@ -222,8 +274,8 @@ If you use this work, please cite it. The canonical BibTeX entry is in
   title = {Letter-derived numerical features of words and their correlation with sentiment},
   author = {{Letter-valence research project}},
   year = {2026},
-  url = {https://github.com/[your-org]/letter-valence-research},
-  note = {68 letter-derived features, 13,914 Warriner lemmas, 1,967 FPB binary articles. Random Forest 5-fold CV accuracy 0.7377 (held-out 20%: 0.751), permutation p < 0.0001.}
+  url = {https://github.com/1AL1-DATA/letter-valence-research},
+  note = {68 letter-derived features, 13,914 Warriner lemmas, 1,967 FPB binary articles. Random Forest 5-fold CV accuracy 0.7377 (held-out 20%: 0.751), permutation p < 0.0001. Cascade follow-up: word-level cheap tier replaces letter tiers; 2-tier cascade accuracy 0.9512 vs 0.9558 heavy-only (McNemar p = 0.15).}
 }
 ```
 

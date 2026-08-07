@@ -117,6 +117,50 @@ Letter features are between random and VADER-default, and comparable to VADER-tu
 - **If you want a transparent, reproducible baseline** with no model to download, this works: `python -m src.analyze` in 10 minutes.
 - **Do not** use this formula on non-English text. CMUdict and the letter frequencies are English.
 
+## The 2-tier cascade follow-up (2026-08-07)
+
+When the letter model was deployed as the cheap tier of a real sentiment engine, it
+was **strictly dominated** by a word-level cheap tier and retired. The cascade is now:
+
+1. **Cheap tier (decides first):** TF-IDF (1–2 grams) + VADER compound + keyword
+   valence → 3-class logistic regression, v = p_pos − p_neg. Decides when |v| ≥ 0.6.
+2. **Heavy tier:** FinancialBERT (VADER as final fallback only).
+
+### Cascade vs heavy-only, clear-polarity set (n=1,967, 5-fold CV)
+
+| Metric | Heavy-only | Cascade |
+|---|---|---|
+| Accuracy (Wilson 95% CI) | 0.9558 [0.9458, 0.9640] | **0.9512 [0.9408, 0.9599]** |
+| Negative F1 | 0.9677 | 0.9573 |
+| Positive F1 | 0.9754 | 0.9712 |
+| Macro-F1 | 0.9716 | 0.9643 |
+| Cheap tier share | — | **36.6%** (@ 97.2% acc) |
+| Heavy tier share | 100% | 63.4% |
+| McNemar vs heavy | — | **p = 0.15 (ns)** |
+
+### Borderline set (n=2,879 neutral sentences), false-polarity rate
+
+| Method | False polarity |
+|---|---|
+| Keyword | 6.6% |
+| **Heavy-only** | **4.9%** |
+| Cascade | 7.7% |
+| Cheap tier standalone | 19.6% |
+| VADER | 32.0% |
+
+### The letter tiers that were replaced
+
+- **DFT probe:** never fires on the clear set — max |v| = 0.922 < 0.95 threshold.
+- **Letter RF:** fires on 3.6% (71/1,967) at 100% accuracy; the heavy tier handled
+  the other 96.4% anyway.
+- Letter features cap at 0.7377 binary CV (feature-bound: learning curve plateaus at
+  n≈1,376), vs 0.79–0.84 for word-level TF-IDF on the same data.
+
+**Conclusion:** a 2-tier word/transformer cascade matches heavy-only accuracy
+(0.9512 vs 0.9558, McNemar p = 0.15, not significant) while the cheap tier absorbs a
+third of the transformer's workload at ~1% of the compute. Full numbers:
+`cascade_benchmark.json`, `cascade_predictions.csv`, `figures/cascade_sentiment_eval.png`.
+
 ## What changed between this run and the original 12-round analysis
 
 The headline number went from **0.7433 → 0.7377** because we cleaned the code, added 11 more features (now 68 instead of 57), and standardized the train/test split. The qualitative conclusions are unchanged: DFT is the dominant family, modular arithmetic is weak, learning curve plateaus around 1,400 examples.

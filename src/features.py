@@ -27,9 +27,7 @@ import gzip
 import json
 import math
 import re
-from collections import Counter
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 
@@ -59,9 +57,9 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = REPO_ROOT / "data"
 
 # Lazy-loaded state
-_LETTER_FREQS: Optional[dict] = None
-_CMU: Optional[dict] = None
-_FEATURE_NAMES: Optional[list[str]] = None
+_LETTER_FREQS: dict | None = None
+_CMU: dict | None = None
+_FEATURE_NAMES: list[str] | None = None
 
 
 # ---- text utilities ----
@@ -73,9 +71,9 @@ def clean(word: str) -> str:
 # ---- main entry point ----
 def features(
     word: str,
-    letter_freqs: Optional[dict] = None,
-    cmu: Optional[dict] = None,
-) -> Optional[dict]:
+    letter_freqs: dict | None = None,
+    cmu: dict | None = None,
+) -> dict | None:
     """Compute all 57 letter-derived features for a single word.
 
     Returns None for empty words, otherwise a dict with the feature names
@@ -105,14 +103,14 @@ def features(
     p1 = _prob_unigrams(letter_freqs)
     positions = [ord(c) - ord('a') + 1 for c in w]
     s = sum(positions)
-    L = len(positions)
+    n_letters = len(positions)
     letters = list(w)
 
     feats: dict[str, float] = {}
 
     # ---- F1: alphabet position aggregations ----
     feats["alpha_sum"] = float(s)
-    feats["alpha_mean"] = float(s / L)
+    feats["alpha_mean"] = float(s / n_letters)
     feats["alpha_max"] = float(max(positions))
     feats["alpha_min"] = float(min(positions))
     feats["alpha_range"] = float(max(positions) - min(positions))
@@ -138,32 +136,32 @@ def features(
     feats["rare_letter_count"] = float(sum(1 for c in letters if c in "qzxjk"))
 
     # ---- F4: bigram statistics ----
-    bigrams = [letters[i] + letters[i+1] for i in range(L-1)]
+    bigrams = [letters[i] + letters[i+1] for i in range(n_letters-1)]
     feats["bigram_unique_ratio"] = float(len(set(bigrams)) / max(1, len(bigrams)))
-    feats["trigram_count"] = float(max(0, L-2))
+    feats["trigram_count"] = float(max(0, n_letters-2))
 
     # ---- F5: phonetic / CMUdict ----
     feats.update(_phonetic_features(w, cmu))
 
     # ---- F6: vowel/consonant shape ----
     n_vow = sum(1 for c in letters if c in VOWELS)
-    n_con = L - n_vow
-    feats["vowel_ratio"] = float(n_vow / L)
-    feats["consonant_ratio"] = float(n_con / L)
-    feats["distinct_letter_ratio"] = float(len(set(letters)) / L)
+    n_con = n_letters - n_vow
+    feats["vowel_ratio"] = float(n_vow / n_letters)
+    feats["consonant_ratio"] = float(n_con / n_letters)
+    feats["distinct_letter_ratio"] = float(len(set(letters)) / n_letters)
     feats["plosive_count"] = float(sum(1 for c in letters if c in PLOSIVES))
-    feats["plosive_ratio"] = float(sum(1 for c in letters if c in PLOSIVES) / L)
+    feats["plosive_ratio"] = float(sum(1 for c in letters if c in PLOSIVES) / n_letters)
     feats["fricative_count"] = float(sum(1 for c in letters if c in FRICATIVES))
     feats["nasal_count"] = float(sum(1 for c in letters if c in NASALS))
     feats["liquid_count"] = float(sum(1 for c in letters if c in LIQUIDS))
 
     # ---- F7: word length ----
-    feats["word_length"] = float(L)
-    feats["log_word_length"] = float(math.log1p(L))
+    feats["word_length"] = float(n_letters)
+    feats["log_word_length"] = float(math.log1p(n_letters))
 
     # ---- F8: group attractors (original) ----
-    feats["alphabet_centeredness"] = float(-sum((p - 13.5) ** 2 for p in positions) / L)
-    feats["letter_position_skew"] = float(sum(positions) / (L * 13.5) - 1.0)
+    feats["alphabet_centeredness"] = float(-sum((p - 13.5) ** 2 for p in positions) / n_letters)
+    feats["letter_position_skew"] = float(sum(positions) / (n_letters * 13.5) - 1.0)
 
     # ---- F9: spectral / DFT ----
     feats.update(_spectral_features(positions))
@@ -171,8 +169,8 @@ def features(
     # ---- F10: compression / Kolmogorov ----
     gz = len(gzip.compress(w.encode("utf-8")))
     feats["gzip_size"] = float(gz)
-    feats["gzip_size_per_char"] = float(gz / L) if L > 0 else 0.0
-    expected_random = L * math.log2(26) / 8
+    feats["gzip_size_per_char"] = float(gz / n_letters) if n_letters > 0 else 0.0
+    expected_random = n_letters * math.log2(26) / 8
     feats["gzip_ratio_vs_random"] = float(gz / expected_random) if expected_random > 0 else 1.0
 
     # ---- F11: number-theoretic (gematria-like) ----
@@ -190,18 +188,21 @@ def features(
 
     # ---- F12: symmetry / run-length / prefix-suffix ----
     feats["is_palindrome"] = float(w == w[::-1])
-    feats["prefix_eq_suffix"] = float(w[:L//2] == w[-L//2:]) if L >= 2 else 0.0
-    matches = sum(1 for i in range(L) for j in range(i+1, L) if w[i] == w[j])
-    feats["symmetry_density"] = float(matches / max(1, L*(L-1)/2))
+    feats["prefix_eq_suffix"] = (
+        float(w[:n_letters//2] == w[-n_letters//2:]) if n_letters >= 2 else 0.0
+    )
+    matches = sum(1 for i in range(n_letters) for j in range(i+1, n_letters) if w[i] == w[j])
+    feats["symmetry_density"] = float(matches / max(1, n_letters*(n_letters-1)/2))
     # Run-length
     runs: list[int] = []
-    if L > 0:
+    if n_letters > 0:
         cur = 1
-        for i in range(1, L):
+        for i in range(1, n_letters):
             if w[i] == w[i-1]:
                 cur += 1
             else:
-                runs.append(cur); cur = 1
+                runs.append(cur)
+                cur = 1
         runs.append(cur)
     feats["max_run_length"] = float(max(runs) if runs else 0)
     feats["n_runs"] = float(len(runs))
@@ -210,8 +211,8 @@ def features(
         _entropy([r / sum(runs) for r in runs]) if len(runs) > 1 else 0.0
     )
     # First/last letter probability under unigram model
-    feats["first_letter_lp"] = float(math.log2(p1.get(w[0], 1e-10))) if L > 0 else 0.0
-    feats["last_letter_lp"] = float(math.log2(p1.get(w[-1], 1e-10))) if L > 0 else 0.0
+    feats["first_letter_lp"] = float(math.log2(p1.get(w[0], 1e-10))) if n_letters > 0 else 0.0
+    feats["last_letter_lp"] = float(math.log2(p1.get(w[-1], 1e-10))) if n_letters > 0 else 0.0
 
     return feats
 
@@ -230,16 +231,21 @@ def get_feature_names() -> list[str]:
 
 # ---- internal helpers ----
 def _is_prime(n: int) -> bool:
-    if n < 2: return False
-    if n < 4: return True
-    if n % 2 == 0: return False
+    if n < 2:
+        return False
+    if n < 4:
+        return True
+    if n % 2 == 0:
+        return False
     for i in range(3, int(math.isqrt(n)) + 1, 2):
-        if n % i == 0: return False
+        if n % i == 0:
+            return False
     return True
 
 
 def _digital_root(n: int) -> int:
-    if n == 0: return 0
+    if n == 0:
+        return 0
     return 1 + (n - 1) % 9
 
 
@@ -253,8 +259,10 @@ def _mispar_hechrechi(c: str) -> int:
     Letters 1-9 -> values 1-9, letters 10-18 -> 10-90, letters 19-26 -> 100-800.
     """
     v = ord(c) - ord('a') + 1
-    if v <= 9: return v
-    if v <= 18: return (v - 9) * 10
+    if v <= 9:
+        return v
+    if v <= 18:
+        return (v - 9) * 10
     return (v - 18) * 100
 
 
@@ -296,32 +304,36 @@ def _phonetic_features(word: str, cmu: dict) -> dict:
 def _spectral_features(positions: list[int]) -> dict:
     """Compute the DFT and autocorrelation features.
 
-    For very short words (L < 4) all features are 0.
+    For very short words (n_letters < 4) all features are 0.
     """
-    L = len(positions)
+    n_letters = len(positions)
     feats = {
         "dft_power_k1": 0.0, "dft_power_k2": 0.0, "dft_power_k3": 0.0,
         "dft_high_freq_ratio": 0.0, "dft_total_power": 0.0,
         "dft_spectral_entropy": 0.0, "autocorr_lag1": 0.0, "autocorr_lag2": 0.0,
     }
-    if L < 4:
+    if n_letters < 4:
         return feats
     sig = np.array(positions, dtype=float)
     sig = sig - sig.mean()  # remove DC component
     f = np.fft.fft(sig)
     psd = np.abs(f) ** 2
-    if L > 1: feats["dft_power_k1"] = float(psd[1])
-    if L > 2: feats["dft_power_k2"] = float(psd[2])
-    if L > 3: feats["dft_power_k3"] = float(psd[3])
-    feats["dft_high_freq_ratio"] = float(psd[L//2:].sum() / max(1, psd.sum()))
+    if n_letters > 1:
+        feats["dft_power_k1"] = float(psd[1])
+    if n_letters > 2:
+        feats["dft_power_k2"] = float(psd[2])
+    if n_letters > 3:
+        feats["dft_power_k3"] = float(psd[3])
+    feats["dft_high_freq_ratio"] = float(psd[n_letters//2:].sum() / max(1, psd.sum()))
     feats["dft_total_power"] = float(psd.sum())
     p = psd[1:] / max(1e-12, psd[1:].sum())
     feats["dft_spectral_entropy"] = float(-np.sum(p * np.log2(p + 1e-12)))
-    mean = sig.mean(); var = sig.var()
+    mean = sig.mean()
+    var = sig.var()
     if var > 0:
-        if L >= 3:
+        if n_letters >= 3:
             feats["autocorr_lag1"] = float(np.mean((sig[:-1] - mean) * (sig[1:] - mean)) / var)
-        if L >= 4:
+        if n_letters >= 4:
             feats["autocorr_lag2"] = float(np.mean((sig[:-2] - mean) * (sig[2:] - mean)) / var)
     return feats
 
@@ -383,7 +395,7 @@ def _prob_unigrams(letter_freqs: dict) -> dict:
 def aggregate_article(
     words: list[str],
     features_per_word: dict[str, dict],
-    feats: Optional[list[str]] = None,
+    feats: list[str] | None = None,
     strategy: str = "all",
 ) -> np.ndarray:
     """Aggregate per-word features into a single vector for an article.
@@ -433,8 +445,8 @@ def aggregate_article(
 # ---- bulk computation ----
 def compute_features_for_words(
     words: list[str],
-    letter_freqs: Optional[dict] = None,
-    cmu: Optional[dict] = None,
+    letter_freqs: dict | None = None,
+    cmu: dict | None = None,
     show_progress: bool = False,
 ) -> dict[str, dict]:
     """Compute features for a list of words. Returns {word: feature_dict}.

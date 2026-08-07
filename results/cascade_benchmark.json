@@ -1,0 +1,227 @@
+{
+  "config": {
+    "cheap_threshold": 0.6,
+    "label_band": 0.1,
+    "model": "ahmedrachid/FinancialBERT-Sentiment-Analysis",
+    "clear_n": 1967,
+    "neutral_n": 2879,
+    "cv": "5-fold stratified, retrain cheap tier per fold"
+  },
+  "clear_set": {
+    "cheap": {
+      "n": 1967,
+      "accuracy": 0.6477,
+      "ci_low": 0.6263,
+      "ci_high": 0.6685,
+      "negative_precision": 0.8925,
+      "negative_recall": 0.6325,
+      "negative_f1": 0.7403,
+      "positive_precision": 0.9696,
+      "positive_recall": 0.6544,
+      "positive_f1": 0.7814,
+      "macro_f1": 0.7609,
+      "neutral_predicted": 0.3146924250127097
+    },
+    "cascade": {
+      "n": 1967,
+      "accuracy": 0.9512,
+      "ci_low": 0.9408,
+      "ci_high": 0.9599,
+      "negative_precision": 0.9694,
+      "negative_recall": 0.9454,
+      "negative_f1": 0.9573,
+      "positive_precision": 0.9893,
+      "positive_recall": 0.9538,
+      "positive_f1": 0.9712,
+      "macro_f1": 0.9643,
+      "neutral_predicted": 0.03253685815963396
+    },
+    "heavy": {
+      "n": 1967,
+      "accuracy": 0.9558,
+      "ci_low": 0.9458,
+      "ci_high": 0.964,
+      "negative_precision": 0.9948,
+      "negative_recall": 0.9421,
+      "negative_f1": 0.9677,
+      "positive_precision": 0.9894,
+      "positive_recall": 0.9618,
+      "positive_f1": 0.9754,
+      "macro_f1": 0.9716,
+      "neutral_predicted": 0.03558718861209965
+    },
+    "vader": {
+      "n": 1967,
+      "accuracy": 0.457,
+      "ci_low": 0.4351,
+      "ci_high": 0.4791,
+      "negative_precision": 0.698,
+      "negative_recall": 0.1722,
+      "negative_f1": 0.2762,
+      "positive_precision": 0.8503,
+      "positive_recall": 0.5833,
+      "positive_f1": 0.6919,
+      "macro_f1": 0.484,
+      "neutral_predicted": 0.4489069649211998
+    },
+    "keyword": {
+      "n": 1967,
+      "accuracy": 0.1912,
+      "ci_low": 0.1744,
+      "ci_high": 0.2091,
+      "negative_precision": 0.6214,
+      "negative_recall": 0.144,
+      "negative_f1": 0.2339,
+      "positive_precision": 0.728,
+      "positive_recall": 0.212,
+      "positive_f1": 0.3284,
+      "macro_f1": 0.2812,
+      "neutral_predicted": 0.7269954245043213
+    }
+  },
+  "mcnemar_vs_cascade": {
+    "cheap": {
+      "both_wrong": 70,
+      "cascade_wrong_only": 26,
+      "other_wrong_only": 623,
+      "p_exact": 0.0,
+      "significant_0.01": true
+    },
+    "heavy": {
+      "both_wrong": 76,
+      "cascade_wrong_only": 20,
+      "other_wrong_only": 11,
+      "p_exact": 0.149613,
+      "significant_0.01": false
+    },
+    "vader": {
+      "both_wrong": 71,
+      "cascade_wrong_only": 25,
+      "other_wrong_only": 997,
+      "p_exact": 0.0,
+      "significant_0.01": true
+    },
+    "keyword": {
+      "both_wrong": 87,
+      "cascade_wrong_only": 9,
+      "other_wrong_only": 1504,
+      "p_exact": 0.0,
+      "significant_0.01": true
+    }
+  },
+  "tier_routing_clear": {
+    "cheap": {
+      "n": 719,
+      "share": 0.3655,
+      "accuracy": 0.9722
+    },
+    "heavy": {
+      "n": 1248,
+      "share": 0.6345,
+      "accuracy": 0.9391
+    }
+  },
+  "threshold_sweep_top": [
+    {
+      "cheap_threshold": 0.8,
+      "band": 0.05,
+      "accuracy": 0.9583,
+      "heavy_share": 0.8831
+    },
+    {
+      "cheap_threshold": 0.9,
+      "band": 0.05,
+      "accuracy": 0.9583,
+      "heavy_share": 0.9781
+    },
+    {
+      "cheap_threshold": 1.0,
+      "band": 0.05,
+      "accuracy": 0.9583,
+      "heavy_share": 1.0
+    },
+    {
+      "cheap_threshold": 0.7,
+      "band": 0.05,
+      "accuracy": 0.9563,
+      "heavy_share": 0.7524
+    },
+    {
+      "cheap_threshold": 0.8,
+      "band": 0.1,
+      "accuracy": 0.9558,
+      "heavy_share": 0.8831
+    },
+    {
+      "cheap_threshold": 0.9,
+      "band": 0.1,
+      "accuracy": 0.9558,
+      "heavy_share": 0.9781
+    },
+    {
+      "cheap_threshold": 1.0,
+      "band": 0.1,
+      "accuracy": 0.9558,
+      "heavy_share": 1.0
+    },
+    {
+      "cheap_threshold": 0.8,
+      "band": 0.15,
+      "accuracy": 0.9548,
+      "heavy_share": 0.8831
+    }
+  ],
+  "threshold_sweep_best": {
+    "cheap_threshold": 1.0,
+    "band": 0.05,
+    "accuracy": 0.9583,
+    "heavy_share": 1.0
+  },
+  "borderline_set": {
+    "cheap": {
+      "n": 2879,
+      "pred_negative": 0.035081625564432097,
+      "pred_neutral": 0.8044459881903439,
+      "pred_positive": 0.16047238624522403,
+      "false_polarity_rate": 0.1956
+    },
+    "cascade": {
+      "n": 2879,
+      "pred_negative": 0.010420284821118444,
+      "pred_neutral": 0.9228898923237235,
+      "pred_positive": 0.06668982285515804,
+      "false_polarity_rate": 0.0771
+    },
+    "heavy": {
+      "n": 2879,
+      "pred_negative": 0.004168113928447377,
+      "pred_neutral": 0.951372004168114,
+      "pred_positive": 0.04445988190343869,
+      "false_polarity_rate": 0.0486
+    },
+    "vader": {
+      "n": 2879,
+      "pred_negative": 0.0281347690170198,
+      "pred_neutral": 0.6804445988190344,
+      "pred_positive": 0.2914206321639458,
+      "false_polarity_rate": 0.3196
+    },
+    "keyword": {
+      "n": 2879,
+      "pred_negative": 0.024313997915943037,
+      "pred_neutral": 0.9336575199722126,
+      "pred_positive": 0.042028482111844394,
+      "false_polarity_rate": 0.0663
+    }
+  },
+  "borderline_tier_routing": {
+    "cheap": {
+      "n": 96,
+      "share": 0.0333
+    },
+    "heavy": {
+      "n": 2783,
+      "share": 0.9667
+    }
+  }
+}
