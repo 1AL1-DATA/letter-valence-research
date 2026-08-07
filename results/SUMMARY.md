@@ -161,6 +161,61 @@ was **strictly dominated** by a word-level cheap tier and retired. The cascade i
 third of the transformer's workload at ~1% of the compute. Full numbers:
 `cascade_benchmark.json`, `cascade_predictions.csv`, `figures/cascade_sentiment_eval.png`.
 
+## Cross-domain generalisation: the same cascade on general news (2026-08-07)
+
+To check that the cascade is a *general* feature and not a finance-specific trick, the
+identical architecture was evaluated on **NewsMTSC** (Hamborg et al., EACL 2021) — a
+5-coder-labelled 3-class sentiment dataset from real-world general news (AllSides),
+held-out `devtest_rw` split (n = 1,067: 651 clear-polarity + 416 neutral). Nothing is
+finance. Two cheap-tier variants × two fixed heavy tiers:
+
+- `cheap_fpb` — cheap word tier trained **only on FinancialPhraseBank** (cross-domain,
+  zero general-news supervision); `cheap_news` — same architecture retrained on the
+  7,758 NewsMTSC train sentences.
+- `heavy_fin` = FinancialBERT (finance-tuned); `heavy_gen` = general-domain transformer
+  (`cardiffnlp/twitter-roberta-base-sentiment-latest`).
+
+### Clear-polarity set (n=651)
+
+| Method | Accuracy | Macro-F1 | Cheap share (@acc) |
+|---|---|---|---|
+| Keyword lexicon | 0.0661 | 0.1199 | — |
+| FinancialBERT (heavy_fin) | 0.3041 | 0.4581 | — |
+| Cheap tier trained on FPB only | 0.4209 | 0.5523 | — |
+| VADER | 0.4685 | 0.5744 | — |
+| Cheap tier trained on news | 0.4931 | 0.6069 | — |
+| General BERT (heavy_gen) | 0.5760 | 0.6641 | — |
+| **Cascade (FPB cheap → gen heavy)** | **0.5975** | 0.6741 | 19.8% @ 83.0% |
+| **Cascade (news cheap → gen heavy)** | **0.6190** | 0.6940 | 24.3% @ 91.8% |
+
+### Borderline set (n=416 neutral sentences), false-polarity rate
+
+| Method | False polarity |
+|---|---|
+| Keyword | 5.3% |
+| Heavy-only (fin) | 15.4% |
+| General BERT | 18.5% |
+| **Cascade (news cheap → gen heavy)** | **18.8%** |
+| Cascade (FPB cheap → gen heavy) | 22.4% |
+| Cheap tier (news) | 26.7% |
+| Cheap tier (FPB) | 30.5% |
+| VADER | 36.5% |
+
+### What this shows
+
+1. **The cheap word tier transfers out of finance.** Trained on nothing but FPB it
+   still beats the finance-tuned FinancialBERT on general news (0.4209 vs 0.3041) and
+   retrained on news it is the strongest single non-transformer component (0.4931).
+2. **The finance-tuned heavy is the domain-locked part.** FinancialBERT collapses on
+   general news — it predicts neutral on 68.7% of clear-polarity sentences and lands
+   *below chance* (0.3041). With a domain-appropriate heavy the cascade again beats
+   heavy-only (0.6190 vs 0.5760) while the cheap tier absorbs ~24% of calls at 91.8%
+   accuracy (threshold sweep reaches 0.70). The cascade *approach* generalises; the
+   heavy model must match the domain.
+
+Full numbers: `general_news_benchmark.json`, `general_news_predictions.csv`,
+`figures/general_news_eval.png`. Dataset in `data/newsmtsc/`.
+
 ## What changed between this run and the original 12-round analysis
 
 The headline number went from **0.7433 → 0.7377** because we cleaned the code, added 11 more features (now 68 instead of 57), and standardized the train/test split. The qualitative conclusions are unchanged: DFT is the dominant family, modular arithmetic is weak, learning curve plateaus around 1,400 examples.

@@ -15,18 +15,21 @@ cheap-tier reference model. The data are NOT financial.
 Design
 ------
 * Clear-polarity set (n = 651 pos/neg devtest_rw sentences): every method
-  {cheap_fpb, cheap_news, cascade_fpb, cascade_news, heavy, vader, keyword}
   evaluated on identical held-out sentences.
     - ``cheap_fpb``  — word-level cheap tier (TF-IDF 1-2 grams + VADER + keyword
       features, 3-class logistic regression) trained ONLY on the 4,846
       FinancialPhraseBank sentences (cross-domain transfer, zero general-news
       supervision).
     - ``cheap_news`` — identical architecture retrained on the 7,758 NewsMTSC
-      train sentences (in-domain upper reference).
-    - ``cascade_fpb`` / ``cascade_news`` — the 2-tier cascade routing each cheap
-      tier to the fixed heavy (FinancialBERT) / VADER fallback.
-    - ``heavy`` = ahmedrachid/FinancialBERT-Sentiment-Analysis (fixed,
-      finance-tuned — a conservative domain-mismatch test on general news).
+      train sentences (in-domain reference).
+    - Two fixed heavy tiers, so the cascade is shown to be a general feature
+      rather than a property of the finance-tuned model:
+        * ``heavy_fin`` = ahmedrachid/FinancialBERT-Sentiment-Analysis (finance)
+        * ``heavy_gen`` = cardiffnlp/twitter-roberta-base-sentiment-latest
+          (general-domain transformer)
+    - ``cascade_<cheap>_<heavy>`` — the 2-tier cascade routing each cheap tier
+      to each heavy tier (VADER fallback).
+    - ``vader`` / ``keyword`` fixed baselines.
 * Borderline set (n = 416 held-out neutral devtest_rw sentences): false-polarity
   rate and predicted-class distribution for every method.
 * Metrics: accuracy + Wilson 95% CI, macro-F1, per-class precision/recall/F1,
@@ -52,7 +55,6 @@ sys.path.insert(0, str(DASHBOARD_SRC))
 
 from esg_dashboard.data.sentiment_engine import (  # noqa: E402
     LABEL_BAND,
-    heavy_score_batch,
     keyword_valence,
     vader_valence,
 )
@@ -63,14 +65,30 @@ from src.benchmark_cascade import (  # noqa: E402
     load_fpb,
     mcnemar_exact,
     predict_from_v,
-    wilson_ci,
 )
 
 RESULTS_DIR = REPO / "results"
 FIGURES_DIR = REPO / "figures"
 
 CHEAP_THRESHOLD = 0.6  # cascade routing threshold (matches FPB benchmark / engine)
-METHODS = ("cheap_fpb", "cheap_news", "cascade_fpb", "cascade_news", "heavy", "vader", "keyword")
+
+HEAVY_FIN = "ahmedrachid/FinancialBERT-Sentiment-Analysis"
+HEAVY_GEN = "cardiffnlp/twitter-roberta-base-sentiment-latest"
+
+CHEAP_TIERS = ("cheap_fpb", "cheap_news")
+HEAVY_TIERS = ("heavy_fin", "heavy_gen")
+METHODS = (
+    "cheap_fpb",
+    "cheap_news",
+    "cascade_fpb_fin",
+    "cascade_news_fin",
+    "cascade_fpb_gen",
+    "cascade_news_gen",
+    "heavy_fin",
+    "heavy_gen",
+    "vader",
+    "keyword",
+)
 
 NEWSMTS = REPO / "data" / "newsmtsc"
 NEWSMTS_TRAIN = NEWSMTS / "train.jsonl"
@@ -97,6 +115,46 @@ def load_newsmtsc(path: Path) -> pd.DataFrame:
     df["label"] = df["polarity"].map({2.0: "negative", 4.0: "neutral", 6.0: "positive"})
     df["y"] = df["label"].map({"negative": 0, "neutral": 1, "positive": 2})
     return df
+
+
+def heavy_score_batch_any(texts: list[str], model_id: str) -> list[dict[str, float]]:
+    """3-class transformer valence probabilities for a configurable model id.
+
+    Same quadratic-score interface as the engine's heavy tier; the model id is
+    parameterised so the cascade can be evaluated against a finance-tuned and a
+    general-domain transformer.
+    """
+    import torch
+    from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
+    model = AutoModelForSequenceClassification.from_pretrained(model_id)
+    model.eval()
+    id2label = getattr(model.config, "id2label", None) or {}
+
+    def norm(idx: int) -> str:
+        name = id2label.get(idx, "").lower()
+        if "pos" in name:
+            return "positive"
+        if "neg" in name:
+            return "negative"
+        return "neutral"
+
+    out = []
+    with torch.inference_mode():
+        for i in range(0, len(texts), 64):
+            batch = texts[i : i + 64]
+            enc = tokenizer(
+                batch, padding=True, truncation=True, max_length=256, return_tensors="pt"
+            )
+            logits = model(**enc).logits
+            probs = torch.softmax(logits, dim=-1).numpy()
+            for row in probs:
+                proba = {"negative": 0.0, "neutral": 0.0, "positive": 0.0}
+                for idx, p in enumerate(row):
+                    proba[norm(idx)] += float(p)
+                out.append(proba)
+    return out
 
 
 def train_cheap_tier(texts, y3, extra):
@@ -176,38 +234,46 @@ def main() -> None:
     kw_v_dev = np.array([keyword_valence(t) for t in dev_texts])
     dev_extra = list(zip(vader_v_dev, kw_v_dev))
 
-    print("Scoring heavy tier (FinancialBERT) on all 1,067 dev sentences...")
-    heavy_proba_dev = heavy_score_batch(dev_texts)
-    heavy_v_dev = np.array([p["positive"] - p["negative"] for p in heavy_proba_dev])
+    print("Scoring heavy tiers on all 1,067 dev sentences...")
+    heavy_v_dev = {}
+    for name, mid in (("fin", HEAVY_FIN), ("gen", HEAVY_GEN)):
+        print(f"  {name}: {mid}")
+        proba = heavy_score_batch_any(dev_texts, mid)
+        heavy_v_dev[name] = np.array([p["positive"] - p["negative"] for p in proba])
     print("  done.")
 
     cheap_fpb_v = cheap_fpb(dev_texts, dev_extra)
     cheap_news_v = cheap_news(dev_texts, dev_extra)
 
     clear_mask = (news["label"] != "neutral").to_numpy()
+    n_words = np.asarray([len(t.split()) for t in dev_texts])
     y_code = y_true
+
     method_v = {
         "cheap_fpb": cheap_fpb_v[clear_mask],
         "cheap_news": cheap_news_v[clear_mask],
-        "heavy": heavy_v_dev[clear_mask],
+        "heavy_fin": heavy_v_dev["fin"][clear_mask],
+        "heavy_gen": heavy_v_dev["gen"][clear_mask],
         "vader": vader_v_dev[clear_mask],
         "keyword": kw_v_dev[clear_mask],
     }
 
-    print("Evaluating methods on the clear set (n=%d)..." % len(clear))
-    method_labels = {m: predict_from_v(method_v[m]) for m in ("cheap_fpb", "cheap_news", "heavy", "vader", "keyword")}
-    cascade_fpb_code, cascade_fpb_tiers = cascade_predict(
-        cheap_fpb_v[clear_mask], heavy_v_dev[clear_mask], vader_v_dev[clear_mask],
-        np.asarray([len(t.split()) for t in dev_texts])[clear_mask],
-        threshold=CHEAP_THRESHOLD, band=LABEL_BAND,
-    )
-    cascade_news_code, cascade_news_tiers = cascade_predict(
-        cheap_news_v[clear_mask], heavy_v_dev[clear_mask], vader_v_dev[clear_mask],
-        np.asarray([len(t.split()) for t in dev_texts])[clear_mask],
-        threshold=CHEAP_THRESHOLD, band=LABEL_BAND,
-    )
-    method_labels["cascade_fpb"] = cascade_fpb_code
-    method_labels["cascade_news"] = cascade_news_code
+    print(f"Evaluating methods on the clear set (n={len(clear)})...")
+    method_labels = {
+        m: predict_from_v(method_v[m])
+        for m in ("cheap_fpb", "cheap_news", "heavy_fin", "heavy_gen", "vader", "keyword")
+    }
+    cascade_labels = {}
+    for cheap_name, cheap_v in (("fpb", cheap_fpb_v), ("news", cheap_news_v)):
+        for heavy_name, hv in heavy_v_dev.items():
+            key = f"cascade_{cheap_name}_{heavy_name}"
+            code, tiers = cascade_predict(
+                cheap_v[clear_mask], hv[clear_mask], vader_v_dev[clear_mask],
+                n_words[clear_mask],
+                threshold=CHEAP_THRESHOLD, band=LABEL_BAND,
+            )
+            cascade_labels[key] = (code, tiers)
+            method_labels[key] = code
 
     metric_sets = {}
     for m in METHODS:
@@ -216,15 +282,14 @@ def main() -> None:
     print("  accuracy / neg-recall / macro-F1:")
     for m in METHODS:
         s = metric_sets[m]
-        print(f"    {m:>13} acc={s['accuracy']:.4f} "
+        print(f"    {m:>19} acc={s['accuracy']:.4f} "
               f"neg_rec={s['negative_recall']:.4f} macroF1={s['macro_f1']:.4f}")
 
     mcnemar = {}
-    for cascade_key in ("cascade_fpb", "cascade_news"):
-        cc = method_labels[cascade_key]
-        mcnemar[cascade_key] = {}
+    for ckey, (cc, _tiers) in cascade_labels.items():
+        mcnemar[ckey] = {}
         for m in METHODS:
-            if m == cascade_key:
+            if m == ckey:
                 continue
             a = cc != y_code
             b = method_labels[m] != y_code
@@ -232,7 +297,7 @@ def main() -> None:
             casc_only = (a & ~b).sum()
             other_only = (~a & b).sum()
             p = mcnemar_exact(int(casc_only), int(other_only))
-            mcnemar[cascade_key][m] = {
+            mcnemar[ckey][m] = {
                 "both_wrong": int(both_wrong),
                 "cascade_wrong_only": int(casc_only),
                 "other_wrong_only": int(other_only),
@@ -241,8 +306,7 @@ def main() -> None:
             }
 
     tier_routing = {}
-    for cascade_key, tiers in (("cascade_fpb", cascade_fpb_tiers), ("cascade_news", cascade_news_tiers)):
-        cc = method_labels[cascade_key]
+    for ckey, (cc, tiers) in cascade_labels.items():
         tiers_arr = np.asarray(tiers)
         tr = {}
         for t, c in zip(*np.unique(tiers_arr, return_counts=True)):
@@ -252,57 +316,57 @@ def main() -> None:
                 "share": round(c / len(clear), 4),
                 "accuracy": round(float((cc[idx] == y_code[idx]).mean()), 4),
             }
-        tier_routing[cascade_key] = tr
+        tier_routing[ckey] = tr
 
     print("Threshold sweep (re-routed on stored valences)...")
     sweep = []
-    for cascade_key, cheap_v in (("cascade_fpb", cheap_fpb_v), ("cascade_news", cheap_news_v)):
-        for ct in (0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0):
-            for band in (0.05, 0.1, 0.15):
-                code, tiers_s = cascade_predict(
-                    cheap_v[clear_mask], heavy_v_dev[clear_mask], vader_v_dev[clear_mask],
-                    np.asarray([len(t.split()) for t in dev_texts])[clear_mask],
-                    threshold=ct, band=band,
-                )
-                acc = float((code == y_code).mean())
-                heavy_share = float(np.mean([t == "heavy" for t in tiers_s]))
-                sweep.append({
-                    "cascade": cascade_key, "cheap_threshold": ct, "band": band,
-                    "accuracy": round(acc, 4), "heavy_share": round(heavy_share, 4),
-                })
+    for cheap_name, cheap_v in (("fpb", cheap_fpb_v), ("news", cheap_news_v)):
+        for heavy_name, hv in heavy_v_dev.items():
+            for ct in (0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0):
+                for band in (0.05, 0.1, 0.15):
+                    code, tiers_s = cascade_predict(
+                        cheap_v[clear_mask], hv[clear_mask], vader_v_dev[clear_mask],
+                        n_words[clear_mask],
+                        threshold=ct, band=band,
+                    )
+                    acc = float((code == y_code).mean())
+                    heavy_share = float(np.mean([t == "heavy" for t in tiers_s]))
+                    sweep.append({
+                        "cascade": f"cascade_{cheap_name}_{heavy_name}",
+                        "cheap_threshold": ct, "band": band,
+                        "accuracy": round(acc, 4), "heavy_share": round(heavy_share, 4),
+                    })
     sweep.sort(key=lambda e: e["accuracy"], reverse=True)
 
     print("Scoring borderline (neutral) set with deployed components...")
+    neut_mask = ~clear_mask
     neut_texts = neut["text"].tolist()
     neut_vader = np.array([vader_valence(t) for t in neut_texts])
     neut_kw = np.array([keyword_valence(t) for t in neut_texts])
     neut_extra = list(zip(neut_vader, neut_kw))
     neut_cheap_fpb = cheap_fpb(neut_texts, neut_extra)
     neut_cheap_news = cheap_news(neut_texts, neut_extra)
-    neut_mask = (news["label"] == "neutral").to_numpy()
-    neut_heavy = heavy_v_dev[neut_mask]
+    neut_n_words = n_words[neut_mask]
 
-    neut_method_labels = {
+    neut_labels = {
         "cheap_fpb": predict_from_v(neut_cheap_fpb),
         "cheap_news": predict_from_v(neut_cheap_news),
-        "heavy": predict_from_v(neut_heavy),
+        "heavy_fin": predict_from_v(heavy_v_dev["fin"][neut_mask]),
+        "heavy_gen": predict_from_v(heavy_v_dev["gen"][neut_mask]),
         "vader": predict_from_v(neut_vader),
         "keyword": predict_from_v(neut_kw),
     }
-    neut_fpb_code, neut_fpb_tiers = cascade_predict(
-        neut_cheap_fpb, neut_heavy, neut_vader, [len(t.split()) for t in neut_texts],
-        threshold=CHEAP_THRESHOLD, band=LABEL_BAND,
-    )
-    neut_news_code, neut_news_tiers = cascade_predict(
-        neut_cheap_news, neut_heavy, neut_vader, [len(t.split()) for t in neut_texts],
-        threshold=CHEAP_THRESHOLD, band=LABEL_BAND,
-    )
-    neut_method_labels["cascade_fpb"] = neut_fpb_code
-    neut_method_labels["cascade_news"] = neut_news_code
+    for cheap_name, cv in (("fpb", neut_cheap_fpb), ("news", neut_cheap_news)):
+        for heavy_name, hv in heavy_v_dev.items():
+            code, _tiers = cascade_predict(
+                cv, hv[neut_mask], neut_vader, neut_n_words,
+                threshold=CHEAP_THRESHOLD, band=LABEL_BAND,
+            )
+            neut_labels[f"cascade_{cheap_name}_{heavy_name}"] = code
 
     borderline = {}
     for m in METHODS:
-        pred = neut_method_labels[m]
+        pred = neut_labels[m]
         n = len(pred)
         false_pol = float(((pred == 0) | (pred == 2)).mean())
         borderline[m] = {
@@ -319,11 +383,11 @@ def main() -> None:
             "dataset": "NewsMTSC (Hamborg et al., EACL 2021), devtest_rw real-world split",
             "cheap_threshold": CHEAP_THRESHOLD,
             "label_band": LABEL_BAND,
-            "model": "ahmedrachid/FinancialBERT-Sentiment-Analysis",
+            "models": {"heavy_fin": HEAVY_FIN, "heavy_gen": HEAVY_GEN},
             "clear_n": len(clear),
             "neutral_n": len(neut),
             "cheap_fpb_train": "FinancialPhraseBank (n=4846, cross-domain transfer)",
-            "cheap_news_train": "NewsMTSC train (n=%d, in-domain reference)" % len(news_train),
+            "cheap_news_train": f"NewsMTSC train (n={len(news_train)}, in-domain reference)",
         },
         "clear_set": metric_sets,
         "mcnemar_vs_cascade": mcnemar,
@@ -337,28 +401,32 @@ def main() -> None:
 
     pred_rows = []
     for i in range(len(clear)):
-        pred_rows.append({
-            "set": "clear", "id": int(clear["id"].iloc[i]),
-            "true": int(y_code[i]),
+        row = {
+            "set": "clear", "id": int(clear["id"].iloc[i]), "true": int(y_code[i]),
             "cheap_fpb_v": round(float(cheap_fpb_v[i]), 6),
             "cheap_news_v": round(float(cheap_news_v[i]), 6),
-            "heavy_v": round(float(heavy_v_dev[i]), 6),
+            "heavy_fin_v": round(float(heavy_v_dev["fin"][i]), 6),
+            "heavy_gen_v": round(float(heavy_v_dev["gen"][i]), 6),
             "vader_v": round(float(vader_v_dev[i]), 6),
             "kw_v": round(float(kw_v_dev[i]), 6),
-            "cascade_fpb_label": int(cascade_fpb_code[i]), "cascade_fpb_tier": cascade_fpb_tiers[i],
-            "cascade_news_label": int(cascade_news_code[i]), "cascade_news_tier": cascade_news_tiers[i],
-        })
+        }
+        for ckey, (cc, tiers) in cascade_labels.items():
+            row[f"{ckey}_label"] = int(cc[i])
+            row[f"{ckey}_tier"] = tiers[i]
+        pred_rows.append(row)
     for i in range(len(neut)):
-        pred_rows.append({
+        row = {
             "set": "neutral", "id": int(neut["id"].iloc[i]), "true": 1,
             "cheap_fpb_v": round(float(neut_cheap_fpb[i]), 6),
             "cheap_news_v": round(float(neut_cheap_news[i]), 6),
-            "heavy_v": round(float(neut_heavy[i]), 6),
+            "heavy_fin_v": round(float(heavy_v_dev["fin"][neut_mask][i]), 6),
+            "heavy_gen_v": round(float(heavy_v_dev["gen"][neut_mask][i]), 6),
             "vader_v": round(float(neut_vader[i]), 6),
             "kw_v": round(float(neut_kw[i]), 6),
-            "cascade_fpb_label": int(neut_fpb_code[i]), "cascade_fpb_tier": neut_fpb_tiers[i],
-            "cascade_news_label": int(neut_news_code[i]), "cascade_news_tier": neut_news_tiers[i],
-        })
+        }
+        for ckey, (cc, _tiers) in cascade_labels.items():
+            row[f"{ckey}_label"] = int(neut_labels[ckey][i])
+        pred_rows.append(row)
     pd.DataFrame(pred_rows).to_csv(RESULTS_DIR / "general_news_predictions.csv", index=False)
 
     print()

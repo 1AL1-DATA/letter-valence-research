@@ -12,6 +12,8 @@ This directory holds the datasets used in the analysis. The files are **not** ch
 | `words_alpha.txt` | dwyl/english-words GitHub repo | 4.2 MB | 370k-word English word list — used to build letter unigram + bigram frequency tables |
 | `letter_freqs.json` | derived from `words_alpha.txt` | 8 KB | Pre-computed letter unigram + bigram counts and probabilities (input to bigram-surprisal features) |
 | `cmudict.dict` | CMU Sphinx project, cmudict.dict | 3.6 MB | CMU Pronouncing Dictionary — 135k words with phonetic transcriptions (input to phonetic features) |
+| `newsmtsc/train.jsonl` | Hamborg et al. (2021), NewsMTSC | 3.3 MB | General-news 3-class sentiment, train split (7,758 sentences, 5-coder labelled) |
+| `newsmtsc/devtest_rw.jsonl` | Hamborg et al. (2021), NewsMTSC | 0.4 MB | Held-out real-world test split (1,067 sentences) — cascade cross-domain eval |
 
 ## How to download
 
@@ -38,6 +40,7 @@ All sources are open access:
 
 - **Warriner et al. 2013**: Standard affective norms, widely redistributed. We use the JULIELab/XANEW mirror because the original OSF URL has been re-purposed.
 - **FinancialPhraseBank**: Created by Malo, Sinha, Korhonen, Wallenius, Takala (2014). The `Sentences_50Agree.txt` split (50% inter-annotator agreement) is the standard benchmark.
+- **NewsMTSC**: Created by Hamborg, Breitinger, Schubotz, Gipp (2021), EACL. 5-coder-labelled sentence-level sentiment from real-world news (AllSides). MIT licence, see `data/newsmtsc/readme.md`. Note: NewsMTSC is **target-dependent** — each sentence's primary target polarity is used as the sentence-level label in our cascade evaluation.
 - **dwyl/english-words**: Open-source list of ~370k English words.
 - **CMU Pronouncing Dictionary**: Public domain, maintained by Carnegie Mellon University.
 

@@ -90,6 +90,28 @@ The data flow through the system, from raw input to final result.
 6. `evaluate.py::learning_curve()` calls `cross_validate()` at each train-set size.
 7. `analyze.py::main()` orchestrates all of the above and writes the results to `results/`.
 
+## The 2-tier cascade evaluation (follow-up)
+
+`src/benchmark_cascade.py` and `src/benchmark_general.py` evaluate a separate,
+deployed component: the sentiment cascade used by
+[esg-dashboard](https://github.com/1AL1-DATA/esg-dashboard).
+
+- **2 tiers**: a word-level cheap tier (TF-IDF 1–2 grams + VADER + keyword features
+  → 3-class logistic regression, v = p_pos − p_neg) decides when |v| ≥ 0.6; otherwise
+  a heavy transformer scores the text (VADER as final fallback).
+- `benchmark_cascade.py` — FinancialPhraseBank evaluation (clear n=1,967, neutral
+  n=2,879): cascade 0.9512 vs heavy-only 0.9558 (McNemar p = 0.15), cheap tier carries
+  36.6% at 97.2% accuracy.
+- `benchmark_general.py` — cross-domain evaluation on general news (NewsMTSC,
+  devtest_rw n=1,067): two cheap-tier variants (trained only on FPB vs on news) × two
+  heavy tiers (FinancialBERT vs a general-domain transformer). Findings: the cheap tier
+  transfers out of finance (0.42), the finance-tuned heavy collapses on general news
+  (0.30), and a cascade with a general heavy beats heavy-only (0.62 vs 0.58).
+- Inputs: `data/newsmtsc/*.jsonl` + the `esg-dashboard` sentiment_engine components.
+  Outputs: `results/cascade_benchmark.json`, `results/general_news_benchmark.json`,
+  `results/*_predictions.csv`, `figures/cascade_sentiment_eval.png`,
+  `figures/general_news_eval.png`.
+
 ## Extension points
 
 - **New feature family**: add it to `src/features.py::features()` and to `FEATURE_FAMILIES` in `src/evaluate.py`. The ablation, learning curve, and CV will pick it up automatically.

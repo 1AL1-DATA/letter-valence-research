@@ -74,3 +74,5 @@
 | Salient phonemes in poetry | t-test | t(38) = 3.6, p < .001 | Aryani 2013 |
 
 **Key takeaway**: The prior literature establishes a real but **modest** effect of phonemic features on word-level affect — typically 1–5% of variance, peaking at 28% in the best-controlled acoustic-feature study (Aryani 2018). **No published paper uses gematria-style letter-position sums as a sentiment signal.** The closest analog (Adelman 2018's phoneme block) explains 1.4%–4.3% of variance.
+
+**Practical follow-up (2026-08-07)**: The letter/word-level work in this repo feeds a production 2-tier sentiment cascade (cheap word tier → heavy transformer) evaluated in `src/benchmark_cascade.py` (FinancialPhraseBank) and `src/benchmark_general.py` (general news, NewsMTSC). The generalisation results — cheap tier transfers out of finance (0.42 vs 0.30 for the finance-tuned heavy on general news), and a cascade with a general-domain heavy beats heavy-only (0.62 vs 0.58) — support the same literature conclusion at the engineering level: the cheap lexicon/word signal is a real, general pre-filter, while domain-specialised models are the accuracy anchor.
