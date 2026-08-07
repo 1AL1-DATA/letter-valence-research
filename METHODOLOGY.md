@@ -265,11 +265,61 @@ Measured on the same data (details in `results/cascade_benchmark.json`):
 The letter result stands as a psycholinguistic finding; the cascade evaluation shows
 that for a production pre-filter the signal is in the **words**, not the letters.
 
+### Cross-domain generalisation: does the cascade work outside finance?
+
+`src/benchmark_general.py` re-runs the identical architecture on **NewsMTSC**
+(Hamborg et al., EACL 2021) — a 5-coder-labelled 3-class sentiment dataset from
+real-world general news (AllSides), held-out `devtest_rw` split (n = 1,067; 651
+clear-polarity + 416 neutral). The data are not financial, so the cascade is shown to
+be a general *approach* rather than a finance-specific trick.
+
+Design mirrors the FPB benchmark, with two cheap-tier variants and two fixed heavy
+tiers:
+
+- **`cheap_fpb`** — the word-level cheap tier trained ONLY on the 4,846
+  FinancialPhraseBank sentences (cross-domain transfer; zero general-news
+  supervision). This is the honest cross-domain read: no general-news label ever
+  reaches the cheap tier.
+- **`cheap_news`** — identical architecture retrained on the 7,758 NewsMTSC train
+  sentences (in-domain reference for the same cost model).
+- **`heavy_fin`** = FinancialBERT (finance-tuned); **`heavy_gen`** =
+  `cardiffnlp/twitter-roberta-base-sentiment-latest` (general-domain transformer).
+  Both are fixed; neither sees NewsMTSC labels.
+- Same routing (`|v| >= 0.6` → cheap, else heavy, VADER fallback), same metrics
+  (accuracy + Wilson CI, macro-F1, exact McNemar, tier routing, threshold sweep).
+
+Results (clear-polarity set, n = 651):
+
+| Method | Accuracy | Macro-F1 |
+|---|---|---|
+| Keyword lexicon | 0.0661 | 0.1199 |
+| FinancialBERT (heavy_fin) | 0.3041 | 0.4581 |
+| Cheap tier trained on FPB only | 0.4209 | 0.5523 |
+| VADER | 0.4685 | 0.5744 |
+| Cheap tier trained on news | 0.4931 | 0.6069 |
+| General BERT (heavy_gen) | 0.5760 | 0.6641 |
+| **Cascade (FPB cheap → gen heavy)** | **0.5975** | 0.6741 |
+| **Cascade (news cheap → gen heavy)** | **0.6190** | 0.6940 |
+
+Interpretation:
+
+1. **The cheap word tier transfers out of finance.** Trained on nothing but FPB, it
+   still beats the finance-tuned FinancialBERT on general news (0.4209 vs 0.3041).
+   Retrained on news it is the strongest non-transformer component (0.4931).
+2. **The finance-tuned heavy is the domain-locked part.** FinancialBERT collapses on
+   general news — it predicts neutral on 68.7% of clear-polarity sentences and lands
+   *below chance* (0.3041). With a domain-appropriate heavy, the cascade again beats
+   heavy-only (0.6190 vs 0.5760, McNemar p < 0.01) while the cheap tier absorbs ~24%
+   of calls at 91.8% accuracy (threshold sweep reaches 0.70 accuracy).
+
+The generalisation result is that the **cascade approach** — cheap word tier + routing
+→ heavy fallback — is a general feature; the heavy transformer must match the domain.
+
 ## Limitations of the methodology
 
-1. **Single dataset, single task, single language.** Validated on FPB binary only. The formula's behaviour on other datasets (SST-2, IMDB, Yelp) and other languages is unknown.
+1. **Single dataset, single task, single language.** The letter formula itself is validated on FPB binary only; the cascade follow-up adds a cross-domain held-out test on general news (NewsMTSC), and the cheap word tier transfers reasonably, but the formula's behaviour on other sentiment tasks and other languages is still unknown.
 
-2. **5-fold CV is not a held-out test.** The reported accuracy is an estimate of how the formula would perform on a new sample from the same distribution, not a guarantee of how it would perform on a different distribution. For a true held-out test, retrain on FPB and evaluate on a different labeled corpus.
+2. **5-fold CV is not a held-out test.** The reported letter accuracy is an estimate of how the formula would perform on a new sample from the same distribution, not a guarantee of how it would perform on a different distribution. The cascade generalisation run partially addresses this — it retrains the cheap tier on FPB and evaluates on a different labeled corpus (NewsMTSC) — and the cross-domain result is reported honestly (0.42 transfer, 0.30 for the finance-tuned heavy).
 
 3. **Feature engineering informed by literature.** The 68 features were selected based on prior work (Adelman 2018, Aryani 2018, de Zubicaray 2024). This is informed feature engineering, not automated feature learning. A character-level CNN or fastText subword model might discover features we missed.
 

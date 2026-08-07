@@ -42,3 +42,4 @@ Dual licence — applies to different parts of this repository.
 #   - words_alpha.txt: MIT licence (dwyl/english-words)
 #   - letter_freqs.json: derived from words_alpha.txt, MIT
 #   - articles_binary.csv / Sentences_50Agree.txt: research use, cite Malo et al. 2014
+#   - newsmtsc/: MIT licence (Hamborg et al. 2021, NewsMTSC)

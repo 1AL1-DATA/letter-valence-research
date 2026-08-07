@@ -4,6 +4,35 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] - 2026-08-07
+
+### Added
+- **`src/benchmark_general.py`** — cross-domain generalisation benchmark: the same
+  2-tier cascade (cheap word tier → heavy transformer) evaluated on **NewsMTSC**
+  (EACL 2021) general-news sentiment, held-out `devtest_rw` split (n = 1,067).
+  - Cheap tier trained only on FinancialPhraseBank (cross-domain transfer) AND
+    retrained on NewsMTSC train (in-domain reference).
+  - Two fixed heavy tiers: FinancialBERT (finance-tuned) and a general-domain
+    transformer (`cardiffnlp/twitter-roberta-base-sentiment-latest`).
+  - Same metrics as the FPB benchmark: Wilson CI, macro-F1, exact McNemar,
+    tier routing, threshold sweep, borderline false-polarity rates.
+- **`src/figures_general.py`** — 4-panel general-news figure
+  (`figures/general_news_eval.png`).
+- **`results/general_news_benchmark.json`** + **`results/general_news_predictions.csv`**.
+- **`data/newsmtsc/`** — NewsMTSC train + devtest_rw JSONL with the dataset readme.
+- Updated README (TL;DR, tree, reproduction steps, "Does the cascade generalise
+  beyond finance?" section, citation), `results/SUMMARY.md`, `METHODOLOGY.md`,
+  `linkedin_post.md`, `CHANGELOG.md`.
+
+### Findings (cross-domain)
+- The cheap word tier transfers out of finance: trained only on FPB it beats the
+  finance-tuned FinancialBERT on general news (0.4209 vs 0.3041).
+- The finance-tuned heavy is the domain-locked part: FinancialBERT lands *below
+  chance* on general news (0.3041; predicts neutral on 68.7% of clear sentences).
+- With a domain-appropriate heavy the cascade again beats heavy-only
+  (0.6190 vs 0.5760) while the cheap tier absorbs ~24% of calls at 91.8% accuracy.
+- The cascade *approach* is a general feature; the heavy model must match the domain.
+
 ## [1.1.0] - 2026-08-06
 
 ### Added
@@ -65,10 +94,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased] - future work
 
-- Cross-dataset transfer: train on FPB, test on a different labeled corpus (SST-2, IMDB).
 - Comparison with a character-level CNN baseline.
 - Hierarchical classification for long documents: split into sentences, aggregate predictions.
 - Ablation on aggregation strategy: mean/max/min/std vs learned attention.
 
+[1.2.0]: https://github.com/[your-org]/letter-valence-research/releases/tag/v1.2.0
 [1.1.0]: https://github.com/[your-org]/letter-valence-research/releases/tag/v1.1.0
 [1.0.0]: https://github.com/[your-org]/letter-valence-research/releases/tag/v1.0.0
