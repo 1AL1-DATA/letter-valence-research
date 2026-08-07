@@ -1,0 +1,344 @@
+{
+  "config": {
+    "dataset": "NewsMTSC (Hamborg et al., EACL 2021), devtest_rw real-world split",
+    "cheap_threshold": 0.6,
+    "label_band": 0.1,
+    "model": "ahmedrachid/FinancialBERT-Sentiment-Analysis",
+    "clear_n": 651,
+    "neutral_n": 416,
+    "cheap_fpb_train": "FinancialPhraseBank (n=4846, cross-domain transfer)",
+    "cheap_news_train": "NewsMTSC train (n=7758, in-domain reference)"
+  },
+  "clear_set": {
+    "cheap_fpb": {
+      "n": 651,
+      "accuracy": 0.4209,
+      "ci_low": 0.3835,
+      "ci_high": 0.4592,
+      "negative_precision": 0.8418,
+      "negative_recall": 0.4115,
+      "negative_f1": 0.5528,
+      "positive_precision": 0.7517,
+      "positive_recall": 0.436,
+      "positive_f1": 0.5519,
+      "macro_f1": 0.5523,
+      "neutral_predicted": 0.47619047619047616
+    },
+    "cheap_news": {
+      "n": 651,
+      "accuracy": 0.4931,
+      "ci_low": 0.4548,
+      "ci_high": 0.5314,
+      "negative_precision": 0.8871,
+      "negative_recall": 0.5486,
+      "negative_f1": 0.678,
+      "positive_precision": 0.7953,
+      "positive_recall": 0.404,
+      "positive_f1": 0.5358,
+      "macro_f1": 0.6069,
+      "neutral_predicted": 0.423963133640553
+    },
+    "cascade_fpb": {
+      "n": 651,
+      "accuracy": 0.3625,
+      "ci_low": 0.3265,
+      "ci_high": 0.4002,
+      "negative_precision": 0.9079,
+      "negative_recall": 0.3441,
+      "negative_f1": 0.4991,
+      "positive_precision": 0.7538,
+      "positive_recall": 0.392,
+      "positive_f1": 0.5158,
+      "macro_f1": 0.5074,
+      "neutral_predicted": 0.5668202764976958
+    },
+    "cascade_news": {
+      "n": 651,
+      "accuracy": 0.4086,
+      "ci_low": 0.3715,
+      "ci_high": 0.4468,
+      "negative_precision": 0.9326,
+      "negative_recall": 0.414,
+      "negative_f1": 0.5734,
+      "positive_precision": 0.8264,
+      "positive_recall": 0.4,
+      "positive_f1": 0.5391,
+      "macro_f1": 0.5563,
+      "neutral_predicted": 0.5407066052227343
+    },
+    "heavy": {
+      "n": 651,
+      "accuracy": 0.3041,
+      "ci_low": 0.27,
+      "ci_high": 0.3406,
+      "negative_precision": 0.9558,
+      "negative_recall": 0.2693,
+      "negative_f1": 0.4202,
+      "positive_precision": 0.7965,
+      "positive_recall": 0.36,
+      "positive_f1": 0.4959,
+      "macro_f1": 0.4581,
+      "neutral_predicted": 0.65284178187404
+    },
+    "vader": {
+      "n": 651,
+      "accuracy": 0.4685,
+      "ci_low": 0.4305,
+      "ci_high": 0.5069,
+      "negative_precision": 0.8117,
+      "negative_recall": 0.4514,
+      "negative_f1": 0.5801,
+      "positive_precision": 0.6667,
+      "positive_recall": 0.496,
+      "positive_f1": 0.5688,
+      "macro_f1": 0.5744,
+      "neutral_predicted": 0.3717357910906298
+    },
+    "keyword": {
+      "n": 651,
+      "accuracy": 0.0661,
+      "ci_low": 0.0494,
+      "ci_high": 0.0878,
+      "negative_precision": 0.7105,
+      "negative_recall": 0.0673,
+      "negative_f1": 0.123,
+      "positive_precision": 0.6667,
+      "positive_recall": 0.064,
+      "positive_f1": 0.1168,
+      "macro_f1": 0.1199,
+      "neutral_predicted": 0.9047619047619048
+    }
+  },
+  "mcnemar_vs_cascade": {
+    "cascade_fpb": {
+      "cheap_fpb": {
+        "both_wrong": 313,
+        "cascade_wrong_only": 102,
+        "other_wrong_only": 64,
+        "p_exact": 0.003947,
+        "significant_0.01": true
+      },
+      "cheap_news": {
+        "both_wrong": 262,
+        "cascade_wrong_only": 153,
+        "other_wrong_only": 68,
+        "p_exact": 0.0,
+        "significant_0.01": true
+      },
+      "cascade_news": {
+        "both_wrong": 358,
+        "cascade_wrong_only": 57,
+        "other_wrong_only": 27,
+        "p_exact": 0.001404,
+        "significant_0.01": true
+      },
+      "heavy": {
+        "both_wrong": 405,
+        "cascade_wrong_only": 10,
+        "other_wrong_only": 48,
+        "p_exact": 0.0,
+        "significant_0.01": true
+      },
+      "vader": {
+        "both_wrong": 286,
+        "cascade_wrong_only": 129,
+        "other_wrong_only": 60,
+        "p_exact": 1e-06,
+        "significant_0.01": true
+      },
+      "keyword": {
+        "both_wrong": 394,
+        "cascade_wrong_only": 21,
+        "other_wrong_only": 214,
+        "p_exact": 0.0,
+        "significant_0.01": true
+      }
+    },
+    "cascade_news": {
+      "cheap_fpb": {
+        "both_wrong": 290,
+        "cascade_wrong_only": 95,
+        "other_wrong_only": 87,
+        "p_exact": 0.603971,
+        "significant_0.01": false
+      },
+      "cheap_news": {
+        "both_wrong": 264,
+        "cascade_wrong_only": 121,
+        "other_wrong_only": 66,
+        "p_exact": 7e-05,
+        "significant_0.01": true
+      },
+      "cascade_fpb": {
+        "both_wrong": 358,
+        "cascade_wrong_only": 27,
+        "other_wrong_only": 57,
+        "p_exact": 0.001404,
+        "significant_0.01": true
+      },
+      "heavy": {
+        "both_wrong": 378,
+        "cascade_wrong_only": 7,
+        "other_wrong_only": 75,
+        "p_exact": 0.0,
+        "significant_0.01": true
+      },
+      "vader": {
+        "both_wrong": 275,
+        "cascade_wrong_only": 110,
+        "other_wrong_only": 71,
+        "p_exact": 0.004601,
+        "significant_0.01": true
+      },
+      "keyword": {
+        "both_wrong": 366,
+        "cascade_wrong_only": 19,
+        "other_wrong_only": 242,
+        "p_exact": 0.0,
+        "significant_0.01": true
+      }
+    }
+  },
+  "tier_routing_clear": {
+    "cascade_fpb": {
+      "cheap": {
+        "n": 129,
+        "share": 0.1982,
+        "accuracy": 0.8295
+      },
+      "heavy": {
+        "n": 522,
+        "share": 0.8018,
+        "accuracy": 0.2471
+      }
+    },
+    "cascade_news": {
+      "cheap": {
+        "n": 158,
+        "share": 0.2427,
+        "accuracy": 0.9177
+      },
+      "heavy": {
+        "n": 493,
+        "share": 0.7573,
+        "accuracy": 0.2454
+      }
+    }
+  },
+  "threshold_sweep_top": [
+    {
+      "cascade": "cascade_news",
+      "cheap_threshold": 0.4,
+      "band": 0.05,
+      "accuracy": 0.5284,
+      "heavy_share": 0.53
+    },
+    {
+      "cascade": "cascade_news",
+      "cheap_threshold": 0.4,
+      "band": 0.1,
+      "accuracy": 0.5192,
+      "heavy_share": 0.53
+    },
+    {
+      "cascade": "cascade_news",
+      "cheap_threshold": 0.4,
+      "band": 0.15,
+      "accuracy": 0.5161,
+      "heavy_share": 0.53
+    },
+    {
+      "cascade": "cascade_news",
+      "cheap_threshold": 0.5,
+      "band": 0.05,
+      "accuracy": 0.4716,
+      "heavy_share": 0.6359
+    },
+    {
+      "cascade": "cascade_news",
+      "cheap_threshold": 0.5,
+      "band": 0.1,
+      "accuracy": 0.4624,
+      "heavy_share": 0.6359
+    },
+    {
+      "cascade": "cascade_fpb",
+      "cheap_threshold": 0.4,
+      "band": 0.05,
+      "accuracy": 0.4593,
+      "heavy_share": 0.576
+    },
+    {
+      "cascade": "cascade_news",
+      "cheap_threshold": 0.5,
+      "band": 0.15,
+      "accuracy": 0.4578,
+      "heavy_share": 0.6359
+    },
+    {
+      "cascade": "cascade_fpb",
+      "cheap_threshold": 0.4,
+      "band": 0.1,
+      "accuracy": 0.4516,
+      "heavy_share": 0.576
+    }
+  ],
+  "threshold_sweep_best": {
+    "cascade": "cascade_news",
+    "cheap_threshold": 0.4,
+    "band": 0.05,
+    "accuracy": 0.5284,
+    "heavy_share": 0.53
+  },
+  "borderline_set": {
+    "cheap_fpb": {
+      "n": 416,
+      "pred_negative": 0.1778846153846154,
+      "pred_neutral": 0.6947115384615384,
+      "pred_positive": 0.12740384615384615,
+      "false_polarity_rate": 0.3053
+    },
+    "cheap_news": {
+      "n": 416,
+      "pred_negative": 0.17067307692307693,
+      "pred_neutral": 0.7331730769230769,
+      "pred_positive": 0.09615384615384616,
+      "false_polarity_rate": 0.2668
+    },
+    "cascade_fpb": {
+      "n": 416,
+      "pred_negative": 0.14182692307692307,
+      "pred_neutral": 0.7908653846153846,
+      "pred_positive": 0.0673076923076923,
+      "false_polarity_rate": 0.2091
+    },
+    "cascade_news": {
+      "n": 416,
+      "pred_negative": 0.12259615384615384,
+      "pred_neutral": 0.8125,
+      "pred_positive": 0.06490384615384616,
+      "false_polarity_rate": 0.1875
+    },
+    "heavy": {
+      "n": 416,
+      "pred_negative": 0.09375,
+      "pred_neutral": 0.8461538461538461,
+      "pred_positive": 0.06009615384615385,
+      "false_polarity_rate": 0.1538
+    },
+    "vader": {
+      "n": 416,
+      "pred_negative": 0.16105769230769232,
+      "pred_neutral": 0.6346153846153846,
+      "pred_positive": 0.20432692307692307,
+      "false_polarity_rate": 0.3654
+    },
+    "keyword": {
+      "n": 416,
+      "pred_negative": 0.04567307692307692,
+      "pred_neutral": 0.9471153846153846,
+      "pred_positive": 0.007211538461538462,
+      "false_polarity_rate": 0.0529
+    }
+  }
+}

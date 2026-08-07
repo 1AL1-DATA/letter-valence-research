@@ -205,6 +205,66 @@ print(cv["accuracy_mean"], "±", cv["accuracy_std"])
 # Expected: 0.7377 ± 0.0058
 ```
 
+## The 2-tier cascade evaluation
+
+The letter formula's practical promise was as a **cheap pre-filter** in front of a
+heavier model. `src/benchmark_cascade.py` tests that hypothesis to its conclusion,
+and in doing so replaces the letter tiers with a word-level cheap tier.
+
+### Design
+
+- **Clear-polarity set** (n = 1,967 pos/neg FinancialPhraseBank sentences): identical
+  5-fold stratified test predictions for every method `{cheap, cascade, heavy, vader,
+  keyword}`. The cheap tier is retrained per fold on the train split (a proper
+  held-out estimate); the transformer / VADER / keyword baselines are fixed models.
+- **Borderline set** (n = 2,879 held-out neutral sentences): false-polarity rate and
+  score distributions for every method (deployed, full-data models).
+- **Metrics:** accuracy + Wilson 95% CI, macro-F1, per-class precision/recall/F1,
+  exact two-sided McNemar significance, and cascade tier routing.
+- **Threshold sweep:** (cheap_threshold, label_band) pairs are re-routed cheaply on
+  stored per-instance component valences, without re-running the heavy tier.
+
+### The cheap tier
+
+Word-level features, not letter-level:
+
+- `TfidfVectorizer(lowercase, token_pattern=[a-z]+, ngram_range=(1,2), min_df=2,
+  max_features=20000)`
+- stacked with two scalar features per text: `vader_valence(text)` and
+  `keyword_valence(text)`
+- 3-class logistic regression (`C=1.0, max_iter=2000, class_weight="balanced"`)
+- valence `v = p_positive − p_negative`
+
+### The cascade
+
+Routing is cheapest-and-most-decisive-first:
+
+1. **cheap tier** decides when `|v| >= 0.6`;
+2. **heavy tier** (FinancialBERT 3-class) otherwise;
+3. VADER only if the heavy tier is unavailable.
+
+### Result
+
+On the clear-polarity set the cascade scores **0.9512** vs **0.9558** for the heavy
+tier alone — a difference that is **not statistically significant** (exact McNemar
+p = 0.15). The cheap tier decides **36.6%** of clear-polarity calls at **97.2%
+accuracy**, and 96.7% of neutral-set calls still land in the heavy tier (i.e. the
+cheap tier almost never fires on genuinely neutral news). This matches heavy-only
+accuracy while cutting transformer load by about a third.
+
+### Why the letter tiers were dropped
+
+Measured on the same data (details in `results/cascade_benchmark.json`):
+
+- The **DFT probe** max `|v|` = 0.922 < 0.95 firing threshold → never fires.
+- The **letter RF** fires on 3.6% of sentences (71/1,967) → the heavy tier did 96.4%
+  of the work anyway.
+- Letter features cap at 0.7377 binary CV and are **feature-bound** (learning curve
+  plateaus at n≈1,376), while word-level TF-IDF reaches 0.79–0.84 on the same data.
+
+The letter result stands as a psycholinguistic finding; the cascade evaluation shows
+that for a production pre-filter the signal is in the **words**, not the letters.
+
 ## Limitations of the methodology
 
 1. **Single dataset, single task, single language.** Validated on FPB binary only. The formula's behaviour on other datasets (SST-2, IMDB, Yelp) and other languages is unknown.
