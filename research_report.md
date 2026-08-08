@@ -274,6 +274,12 @@ On the FinancialPhraseBank clear-polarity set (n = 1,967, 5-fold CV) the cascade
 scores 0.9512 vs 0.9558 heavy-only (exact McNemar p = 0.15, not significant) while the
 cheap tier decides 36.6% of calls at 97.2% accuracy — a third of the transformer's
 load absorbed at ~1% of the compute. Details in `results/cascade_benchmark.json`.
+*Caveat on the absolute numbers:* the heavy tier
+(`ahmedrachid/FinancialBERT-Sentiment-Analysis`) was itself fine-tuned on
+FinancialPhraseBank, so ~90% of these evaluation sentences were seen during its
+own fine-tuning — the in-domain accuracies are optimistic in-sample ceilings. The
+relative cascade-vs-heavy comparison (both share the identical heavy) and the
+compute-savings conclusion are unaffected.
 
 To test whether the cascade is a general *approach* rather than a finance-specific
 trick, the identical architecture was evaluated on **NewsMTSC** (Hamborg et al., EACL
@@ -293,6 +299,14 @@ with two fixed heavy tiers (FinancialBERT vs a general-domain transformer,
 | General BERT (heavy_gen) | 0.5760 [0.538, 0.613] | 0.6641 |
 | Cascade (FPB cheap → gen heavy) | 0.5975 [0.559, 0.635] | 0.6741 |
 | **Cascade (news cheap → gen heavy)** | **0.6190 [0.581, 0.656]** | **0.6940** |
+| Majority-class baseline ("always negative") | 0.6160 | — |
+
+The clear set is imbalanced (401 negative / 250 positive), so the majority-class
+baseline is 0.6160: **only the news-cheap cascade (0.6190) clears it**, and the
+heavy-only 0.5760 is *below* it. A dataset-leakage check found that four of the
+1,067 devtest sentences (two of them clear-polarity) also appear in the NewsMTSC
+training split used to train the news cheap tier — a ~0.4% overlap whose
+worst-case contribution to the +4.3-point headline is ≤ ~0.3 points.
 
 Two findings (significance = exact two-sided McNemar on the paired sentences):
 
@@ -304,7 +318,8 @@ Two findings (significance = exact two-sided McNemar on the paired sentences):
    (p = 0.20).
 2. **The finance-tuned heavy is the domain-locked part.** FinancialBERT collapses on
    general news — predicting neutral on 65.3% of clear-polarity sentences and landing
-   below chance (0.3041, CI [0.270, 0.341]). With a domain-appropriate heavy, only
+   below the majority-class baseline (0.3041 vs 0.616) and below 50% random
+   guessing. With a domain-appropriate heavy, only
    the **news-cheap cascade** is a supported win over heavy-only (0.6190 vs 0.5760,
    **+4.3 points, paired-Wilson CI [2.8, 4.9], bootstrap CI [2.5, 6.3]**,
    McNemar p ≈ 8×10⁻⁷, the edge resting on 31 of 34 discordant pairs); the FPB-cheap

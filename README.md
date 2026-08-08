@@ -6,7 +6,7 @@
 
 > **Cascade follow-up (2026-08-07).** When the letter model was deployed as the cheap tier of a real sentiment engine, it turned out to be **strictly dominated**: the DFT probe's max `|v|` (0.922) never clears its 0.95 threshold, and the letter RF fires on only 3.6% of sentences. A **word-level cheap tier** — TF-IDF (1–2 grams) + VADER + keyword features through a 3-class logistic regression — replaces both. In a 2-tier cascade (cheap word tier → FinancialBERT), the cheap tier decides **36.6%** of clear-polarity calls at **97.2% accuracy** and the cascade scores **0.9512** vs **0.9558** for heavy-only (McNemar p = 0.15, not significant) while cutting transformer load by a third. One-third of calls never touch the transformer. Full evaluation in `results/cascade_benchmark.json` + `src/benchmark_cascade.py`.
 
-> **Cross-domain generalisation (2026-08-07).** The same cascade architecture was evaluated on **general news** (NewsMTSC, 1,067 held-out non-financial sentences). The cheap tier trained **only on FinancialPhraseBank** still beats the finance-tuned FinancialBERT on general news (0.42 vs 0.30 — the latter lands *below chance*, predicting neutral on 65.3% of clear sentences). Retrained on news it reaches 0.49. With a domain-appropriate general transformer, the news-trained-cheap cascade beats heavy-only (0.62 vs 0.58; exact McNemar p ≈ 8×10⁻⁷, +4.3 points [2.8, 4.9]) while the cheap tier absorbs ~24% of calls at 91.8% accuracy; the FPB-trained-cheap cascade's +2.2-point edge is not significant, and the two cascade variants are not established as different (p = 0.049, above the 0.01 threshold). **The cascade approach is a general feature; the finance-tuned heavy is the domain-locked part.** Full evaluation in `results/general_news_benchmark.json` + `src/benchmark_general.py`; significance audit in `src/robustness_analysis.py`.
+> **Cross-domain generalisation (2026-08-07).** The same cascade architecture was evaluated on **general news** (NewsMTSC, 1,067 held-out non-financial sentences). The cheap tier trained **only on FinancialPhraseBank** still beats the finance-tuned FinancialBERT on general news (0.42 vs 0.30 — the latter lands *below the 61.6% majority-class baseline* and below 50% random guessing, predicting neutral on 65.3% of clear sentences). Retrained on news it reaches 0.49. With a domain-appropriate general transformer, the news-trained-cheap cascade beats heavy-only (0.62 vs 0.58; exact McNemar p ≈ 8×10⁻⁷, +4.3 points [2.8, 4.9]) while the cheap tier absorbs ~24% of calls at 91.8% accuracy; the FPB-trained-cheap cascade's +2.2-point edge is not significant, and the two cascade variants are not established as different (p = 0.049, above the 0.01 threshold). **The cascade approach is a general feature; the finance-tuned heavy is the domain-locked part.** Full evaluation in `results/general_news_benchmark.json` + `src/benchmark_general.py`; significance audit in `src/robustness_analysis.py`.
 
 > **This repo is also a reference implementation of a research-artifact structure.** See [TEMPLATE.md](TEMPLATE.md) for the generic 5-layer structure, the 10 mandatory files, the 6 recommended files, the 4 anti-patterns, the 6-question principled evaluation checklist, the 8 figures standard, and the 18-item readiness checklist.
 
@@ -236,7 +236,14 @@ false-polarity rate from 19.6% to 7.7% (**p ≈ 3×10⁻⁶¹**, exact McNemar) 
 a small but real cost versus heavy-only (7.7% vs 4.9%, **p ≈ 4×10⁻²⁵**): the
 "small polarity cost" framing is statistically supported, and so is the reduction
 relative to the cheap tier. **This is the "letter pre-filter" hypothesis tested to
-its conclusion: the signal is real but lives in words, not letters.** See
+its conclusion: the signal is real but lives in words, not letters.**
+
+> **Leak caveat on the absolute FPB numbers.** `ahmedrachid/FinancialBERT-Sentiment-Analysis`
+> was itself fine-tuned on FinancialPhraseBank, so ~90% of the 4,846 evaluation
+> sentences were seen by the heavy tier during its own fine-tuning; the in-domain
+> accuracies are optimistic (in-sample) ceilings. The relative
+> cascade-vs-heavy comparison (both share the identical heavy) and the
+> compute-savings conclusion are unaffected. See
 `src/benchmark_cascade.py`, `results/cascade_benchmark.json`, and
 `figures/cascade_sentiment_eval.png`.
 
@@ -265,6 +272,14 @@ fixed heavy tiers:
 | General BERT alone (heavy_gen) | 0.5760 [0.538, 0.613] | 0.6641 | 23.3% [19.5, 27.6] |
 | Cascade (FPB cheap → gen heavy) | 0.5975 [0.559, 0.635] | 0.6741 | 27.4% [23.3, 31.9] |
 | **Cascade (news cheap → gen heavy)** | **0.6190 [0.581, 0.656]** | **0.6940** | 26.4% [22.4, 30.9] |
+| Majority-class baseline ("always negative") | 0.6160 | — | — |
+
+The clear set is imbalanced (401 negative / 250 positive), so the majority-class
+baseline is 0.6160: **only the news-cheap cascade (0.6190) clears it**, and the
+heavy-only 0.5760 is *below* it. A dataset-leakage check found that four of the
+1,067 devtest sentences (two of them clear-polarity) also appear in the NewsMTSC
+training split used to train the news cheap tier — a ~0.4% overlap whose
+worst-case contribution to the +4.3-point headline is ≤ ~0.3 points.
 
 All significance is exact two-sided McNemar on the paired sentences. Two honest
 findings, with the significance that survives the numbers:
@@ -277,7 +292,9 @@ findings, with the significance that survives the numbers:
    VADER but not significantly so (p = 0.20).
 2. **The finance-tuned heavy is the domain-locked part.** FinancialBERT collapses
    on general news — it predicts neutral on 65.3% of clear-polarity sentences and
-   lands *below chance* (0.3041, CI [0.270, 0.341]). With a domain-appropriate
+   lands *below the majority-class baseline* (0.3041 vs 0.616 — the clear set is
+   imbalanced, 401 negative / 250 positive, so "always-negative" alone scores
+   61.6%) and below 50% random guessing. With a domain-appropriate
      general heavy, **only the news-cheap cascade is a supported win**: 0.6190 vs
      0.5760, **+4.3 points (paired-Wilson CI [2.8, 4.9], bootstrap [2.5, 6.3])**,
      **McNemar p ≈ 8×10⁻⁷** — the edge rests on 31 of 34 discordant pairs
