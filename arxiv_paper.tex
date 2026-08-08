@@ -346,13 +346,16 @@ Two findings follow:
    clear-polarity sentences (its \texttt{neutral\_predicted} fraction) and lands
    below chance (0.3041; Wilson 95\% CI [0.270, 0.341]). With a
    domain-appropriate heavy, only the \emph{news}-cheap cascade is a supported
-   win: it beats heavy-only \textbf{0.6190 vs.\ 0.5760} (exact McNemar
-     $p \approx 8\times10^{-7}$, significant at the 0.01 level), and both cascades
-    beat their own cheap tiers ($p = 3\times10^{-9}$ and $p = 10^{-13}$). The
-    \emph{FPB}-cheap cascade is numerically higher than heavy-only (0.5975) but this is
-   \emph{not} significant (exact McNemar $p = 0.02$, above the
-   multiple-comparison threshold), so it should be read as a point estimate,
-   not an improvement. The cheap tier absorbs 24.3\% of clear calls
+   win: it beats heavy-only \textbf{0.6190 vs.\ 0.5760} (+4.3 points; exact
+   McNemar $p \approx 8\times10^{-7}$ at the 0.01 level; paired-Wilson CI on the
+   difference [2.8, 4.9] points), and both cascades beat their own cheap tiers
+   ($p = 3\times10^{-9}$ and $p = 10^{-13}$). The \emph{FPB}-cheap cascade is
+   numerically higher than heavy-only (0.5975) but this is \emph{not} significant
+   (exact McNemar $p = 0.02$, above the multiple-comparison threshold), so it
+   should be read as a point estimate, not an improvement; the two cascade
+   variants do not differ reliably at the pre-specified $\alpha = 0.01$ level
+   ($p = 0.049$; 95\% bootstrap CI on the difference [+0.2, +4.2] points is
+   marginal). The cheap tier absorbs 24.3\% of clear calls
    (n = 158; Wilson 95\% CI [0.211, 0.277]) at 91.8\% accuracy (CI [0.864,
    0.951]). A threshold sweep (routing threshold $\in \{0.4,\dots,1.0\}$,
    band $\in \{0.05,0.1,0.15\}$, re-routed on stored per-instance valences)
@@ -378,10 +381,17 @@ false polarity from 19.6\% to 7.7\% ($p = 3\times10^{-61}$) while remaining
 above heavy-only's 4.9\% ($p = 4\times10^{-25}$). On general news, the cascade's
 benefit is therefore the clear-polarity accuracy gain and the compute saving, not
 polarity-error reduction; it should not be claimed as a false-polarity reducer
-out of domain. Adjacent rates differ by less than the Wilson 95\% CI
-($\pm$4--5 points on n = 416) and are not separable at this sample size; the
-supported claims are the coarse ordering (keyword $\ll$ heavy\_fin $<$ general
-heavy/cascades $<$ cheap tiers $<$ VADER) and the paired differences above.
+out of domain. Paired tests resolve a staircase rather than a flat ordering:
+keyword is significantly below heavy\_fin ($p = 7\times10^{-7}$), heavy\_fin
+below heavy\_gen ($p = 2\times10^{-3}$), heavy\_gen below the two cascades
+(13/0 and 17/0 one-directional discordant pairs, $p = 2\times10^{-4}$ /
+$10^{-5}$), and cheap\_fpb below VADER ($p = 4\times10^{-3}$). The central
+plateau --- heavy\_gen through the cheap tiers (23--31\%) --- is not otherwise
+resolvable at n = 416: adjacent members differ by less than the paired
+resolution of $\sim$7 points at $\alpha = 0.01$ / 80\% power (pairwise
+$p \ge 0.25$), so no within-plateau ordering is supported; the cascade's step
+above heavy\_gen is significant only because its 13 and 17 discordant pairs are
+perfectly one-directional.
 
 \begin{table}[ht]
 \centering
@@ -407,13 +417,29 @@ VADER & 36.5\% & [32.1, 41.3] \\
 \paragraph{Robustness and limits.} All cross-domain conclusions rest on a
 single held-out split (n = 651 clear / 416 borderline) from one corpus and one
 language, with no repeated resampling and no independent replication. The
-supported claims are therefore limited to: the news-cheap cascade significantly
-beats heavy-only on clear-polarity accuracy; the FPB-cheap cascade does not; the
-cascade is not a false-polarity reducer on the general-news borderline set; and
-the in-domain (FPB) false-polarity reduction is large and highly significant.
-Effect sizes on general news are small, and the paired significance we report is
-on fixed, overlapping samples; we encourage replication on additional corpora
-before these cross-domain results are treated as stable.
+paired (exact McNemar) p-values are two-sided and pre-specified at
+$\alpha = 0.01$ for the cascade-vs-baseline comparisons. The supported claims
+are: (i) the \emph{news}-cheap cascade beats heavy-only on clear-polarity
+accuracy by +4.3 points (95\% paired-Wilson CI [2.8, 4.9] points; a 20{,}000-resample
+bootstrap CI on the difference is [2.5, 6.3]); (ii) the \emph{FPB}-cheap
+cascade does not ($p = 0.02$); (iii) the two cascade variants do not differ
+reliably --- 0.6190 vs.\ 0.5975, $p = 0.049$, above the pre-specified
+$\alpha = 0.01$ level, with a 95\% bootstrap CI on the difference of
+[+0.2, +4.2] points sitting at the boundary of zero; (iv) on the
+general-news borderline set the cascade is not a false-polarity reducer, and
+the 0--3-point gaps to its own cheap tier lie below the resolution of this
+sample --- at n = 416 a paired test at $\alpha = 0.01$ / 80\% power resolves
+only differences of $\sim$7 points --- whereas the 13/0 and 17/0 discordant
+pairs behind the \emph{worst}-than-heavy 3.1/4.1-point gaps are significant
+because every discordant pair points the same way; (v) the in-domain (FPB)
+false-polarity reduction is large and highly significant (19.6\% $\to$ 7.7\%,
+$p \approx 3\times10^{-61}$; paired-difference CI [0.107, 0.128]). A further
+caveat: FinancialBERT's low 15.4\% false-polarity rate on the general
+borderline set partly reflects out-of-domain conservatism --- it labels 84.6\%
+of those sentences neutral --- the same 65.3\% neutral rate that sinks it on
+the clear set. Effect sizes on general news are small, and the p-values are
+computed on fixed, overlapping samples; we encourage replication on additional
+corpora before these cross-domain results are treated as stable.
 
 Reproduction: \texttt{python -m src.benchmark\_general} requires the NewsMTSC
 split files (\texttt{data/newsmtsc/devtest\_rw.jsonl},

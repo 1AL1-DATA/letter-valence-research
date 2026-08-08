@@ -306,16 +306,32 @@ Two findings (significance = exact two-sided McNemar on the paired sentences):
    general news — predicting neutral on 65.3% of clear-polarity sentences and landing
    below chance (0.3041, CI [0.270, 0.341]). With a domain-appropriate heavy, only
    the **news-cheap cascade** is a supported win over heavy-only (0.6190 vs 0.5760,
-   McNemar p ≈ 8×10⁻⁷); the FPB-cheap cascade (0.5975) is numerically higher but
-   not significant (p = 0.02, above the 0.01 multiple-comparison threshold). The
+   **+4.3 points, paired-Wilson CI [2.8, 4.9], bootstrap CI [2.5, 6.3]**,
+   McNemar p ≈ 8×10⁻⁷); the FPB-cheap
+   cascade (0.5975) is numerically higher but
+   not significant (p = 0.02, above the 0.01 multiple-comparison threshold), and the
+   two cascade variants do not differ reliably at the pre-specified α = 0.01 level
+   (p = 0.049; 95% bootstrap CI on the difference [+0.2, +4.2] points is marginal). The
    cheap tier absorbs 24.3% of calls (n = 158, CI [21.1, 27.7]) at 91.8% accuracy,
    and the threshold-sweep best (0.699) is an in-sample grid maximum, not a
    held-out estimate. On the borderline set (n = 416) the cascade is *not* a
    false-polarity reducer out of domain — versus its cheap tier the rate is flat
    (p = 1.0 / 0.25) and versus heavy-only it is slightly but significantly above
-   (p ≈ 2×10⁻⁴ / <10⁻⁴) — in contrast to the finance borderline set (n = 2,879),
-   where it cuts cheap-tier false polarity 19.6% → 7.7% (p ≈ 3×10⁻⁶¹). The cascade
-   *approach* is a general feature; the heavy model must match the domain.
+   (p ≈ 2×10⁻⁴ / <10⁻⁴). Power caveat: at n = 416 a paired test at α = 0.01 / 80%
+    power resolves only ~7-point differences, so those null gaps mean
+    "indistinguishable here", not "equal"; the significant worse-than-heavy gaps rest
+    on 13/0 and 17/0 one-directional discordant pairs. Paired tests resolve a
+    staircase: keyword is significantly below heavy_fin (p ≈ 7×10⁻⁷), heavy_fin
+    below heavy_gen (p ≈ 2×10⁻³), heavy_gen below the cascades (13/0 and 17/0
+    discordant pairs), and cheap_fpb below VADER (p ≈ 4×10⁻³); the central plateau
+    (heavy_gen through the cheap tiers, 23–31%) is not otherwise resolvable at
+    n = 416 (pairwise p ≥ 0.25). Keyword's low 5.3% is bought
+    by predicting neutral on 90.5% of the clear set, and part of heavy_fin's 15.4% is
+    the same out-of-domain conservatism (84.6% neutral on the borderline sentences) —
+    in contrast to the finance borderline set (n = 2,879),
+    where it cuts cheap-tier false polarity 19.6% → 7.7% (p ≈ 3×10⁻⁶¹,
+    paired-difference CI [0.107, 0.128]). The cascade
+    *approach* is a general feature; the heavy model must match the domain.
 
 Details in `results/general_news_benchmark.json` and `figures/general_news_eval.png`.
 

@@ -215,17 +215,26 @@ the 0.01 multiple-comparison threshold). Both cascades beat their own cheap tier
 | Cheap tier (FPB) | 30.5% [26.3, 35.1] |
 | VADER | 36.5% [32.1, 41.3] |
 
-Adjacent rates are within each other's 95% CI (±~4–5 points on n = 416) and are
-not separable at this sample size; only the coarse ordering (keyword ≪ heavy_fin
-< general heavy/cascades < cheap tiers < VADER) and the paired differences below
-are supported. Paired tests (exact McNemar): the cascade is *not* a
-false-polarity reducer here — vs its own cheap tier 26.4 vs 26.7% (p = 1.0) and
-27.4 vs 30.5% (p = 0.25); vs heavy-only it is slightly but significantly *above*
-(p ≈ 2×10⁻⁴ / <10⁻⁴). Keyword's 5.3% is trivially conservative (predicts neutral
-on 90.5% of the clear set). This is the opposite of the finance borderline set,
+Paired tests resolve a staircase, not a flat ordering: keyword is significantly
+below heavy_fin (p ≈ 7×10⁻⁷), heavy_fin below heavy_gen (p ≈ 2×10⁻³), heavy_gen
+below the cascades (13/0 and 17/0 discordant pairs), and cheap_fpb below VADER
+(p ≈ 4×10⁻³); the central plateau — heavy_gen through the cheap tiers (23–31%)
+— is not otherwise resolvable at this sample size (adjacent members differ by
+less than the paired resolution; pairwise p ≥ 0.25). On the cascade specifically:
+it is *not* a false-polarity reducer here — vs its own cheap tier 26.4 vs 26.7%
+(p = 1.0) and 27.4 vs 30.5% (p = 0.25); vs heavy-only it is slightly but
+significantly *above* (p ≈ 2×10⁻⁴ / <10⁻⁴). Power is the key caveat: at n = 416 a paired test at α =
+0.01 / 80% power resolves only ~7-point differences, so the 0–3-point gaps to the
+cheap tier mean "indistinguishable in this sample", not "equal"; the significant
+*worse*-than-heavy 3.1/4.1-point gaps rest on 13/0 and 17/0 discordant pairs,
+significant because perfectly one-directional. Keyword's 5.3% is trivially
+conservative (predicts neutral on 90.5% of the clear set), and part of heavy_fin's
+15.4% is the same out-of-domain conservatism (it labels 84.6% of the borderline
+sentences neutral). This is the opposite of the finance borderline set,
 where the cascade *does* cut cheap-tier false polarity (19.6% → 7.7%, p ≈
-3×10⁻⁶¹). On general news the cascade's benefit is accuracy on clear-polarity
-sentences + compute saving, not polarity-error reduction.
+3×10⁻⁶¹, paired-difference CI [0.107, 0.128]). On general news the cascade's
+benefit is accuracy on clear-polarity sentences + compute saving, not
+polarity-error reduction.
 
 ### What this shows
 
@@ -237,9 +246,12 @@ sentences + compute saving, not polarity-error reduction.
 2. **The finance-tuned heavy is the domain-locked part.** FinancialBERT collapses on
    general news — it predicts neutral on 65.3% of clear-polarity sentences and lands
    *below chance* (0.3041, CI [0.270, 0.341]). With a domain-appropriate heavy, the
-   **news-cheap cascade** beats heavy-only (0.6190 vs 0.5760, McNemar p ≈ 8×10⁻⁷)
+   **news-cheap cascade** beats heavy-only (0.6190 vs 0.5760, **+4.3 points,
+   paired-Wilson CI [2.8, 4.9], bootstrap CI [2.5, 6.3]**, McNemar p ≈ 8×10⁻⁷)
    while the cheap tier absorbs 24.3% of calls (n = 158) at 91.8% accuracy; the
-   FPB-cheap cascade is not a significant improvement (p = 0.02). The threshold-sweep
+   FPB-cheap cascade is not a significant improvement (p = 0.02), and the two
+    cascade variants do not differ reliably at the pre-specified α = 0.01 level
+    (p = 0.049; 95% bootstrap CI on the difference [+0.2, +4.2] points is marginal). The threshold-sweep
    best (0.699) is an **in-sample** grid maximum, an upper bound rather than a
    held-out estimate. The cascade *approach* generalises; the heavy model must match
    the domain. On general news the cascade should not be claimed as a false-polarity

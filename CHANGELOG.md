@@ -87,6 +87,36 @@ All notable changes to this project are documented here. The format follows
   significant (p = 0.02, above the 0.01 multiple-comparison threshold). Both
   cascade rows were un-bolded/nuanced accordingly. cheap_fpb vs heavy_fin
   p ≈ 4×10⁻⁷; cheap_news vs VADER p = 0.20 (ns); cheap_fpb vs VADER p ≈ 5×10⁻⁴.
+- **Effect-size CIs added for the headline win**: +4.3 points (0.6190 vs 0.5760)
+  with paired-Wilson CI [2.8, 4.9] and a 20,000-resample bootstrap CI [2.5, 6.3].
+- **cascade_news vs cascade_fpb explicitly reported as marginal**: clear-set
+  p = 0.049 (above the pre-specified 0.01 threshold; 95% bootstrap CI on the
+  difference [+0.2, +4.2] points sits at the boundary of zero) and borderline
+  p = 0.42 — the two cascade variants are not established as different, so
+  0.6190 vs 0.5975 is a marginal, not a supported, difference.
+- **Power/resolution analysis added**: at n = 416 a paired McNemar test at
+  α = 0.01 / 80% power resolves only ~7-point differences, so the borderline
+  null gaps (0–3 pts) mean "indistinguishable in this sample", not "equal";
+  the significant *worse*-than-heavy gaps (3.1/4.1 pts) rest on 13/0 and 17/0
+  discordant pairs, significant only because perfectly one-directional. The
+  FPB reduction (19.6% → 7.7%) carries a paired-difference CI [0.107, 0.128].
+- **heavy_fin out-of-domain conservatism noted on the borderline set**: it
+  labels 84.6% of the general-neutral sentences neutral (same default that
+  sinks it on the clear set at 65.3%), so its low 15.4% false-polarity is
+  partly the same "never commit" artifact as keyword's.
+- **"Adjacent rates not separable" claim corrected** (it was too broad):
+  paired tests resolve a staircase, not a flat ordering — keyword is
+  significantly below heavy_fin (p ≈ 7×10⁻⁷), heavy_fin below heavy_gen
+  (p ≈ 2×10⁻³), heavy_gen below the cascades (13/0 and 17/0 discordant pairs),
+  and cheap_fpb below VADER (p ≈ 4×10⁻³) — while the central plateau
+  (heavy_gen through the cheap tiers, 23–31%) is not otherwise resolvable at
+  n = 416 (pairwise p ≥ 0.25). Corrected in `README.md`, `results/SUMMARY.md`,
+  `METHODOLOGY.md`, `research_report.md`, `arxiv_paper.tex`.
+- **cascade_news vs cascade_fpb corrected to "marginal", not "unresolved"**:
+  exact p = 0.049 (above the pre-specified 0.01 threshold) but the 95%
+  bootstrap CI on the difference is [+0.2, +4.2] points (40/40 resamples
+  exclude zero) — the difference is at the boundary of zero, not established
+  at the strict level, but not flat either.
 - **Wilson 95% CIs added** to every accuracy and false-polarity table and the
   key point estimates (24.3% share n = 158, CI [21.1, 27.7]; 91.8% accuracy CI
   [86.4, 95.1]; all borderline rates ±~4–5 pts on n = 416).
@@ -100,6 +130,12 @@ All notable changes to this project are documented here. The format follows
   resampling, no independent replication (paper §6 and METHODOLOGY.md).
 
 ### Added
+- **`src/robustness_analysis.py`** — runnable, reproducible audit that
+  recomputes every significance claim from the stored per-instance CSVs:
+  exact paired McNemar p-values, Wilson CIs, paired-difference CIs,
+  20,000-resample bootstrap CIs, and the per-comparison resolvable difference
+  at α = 0.01 / 80% power. Run with
+  `/home/a/esg-dashboard/.venv/bin/python -m src.robustness_analysis`.
 - **`arxiv_paper.tex` / `arxiv_paper.pdf`** re-rendered: clear-set and
   borderline tables now carry Wilson 95% CI columns; §6 rewritten with the
   corrected borderline analysis and a "Robustness and limits" paragraph.

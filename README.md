@@ -6,7 +6,7 @@
 
 > **Cascade follow-up (2026-08-07).** When the letter model was deployed as the cheap tier of a real sentiment engine, it turned out to be **strictly dominated**: the DFT probe's max `|v|` (0.922) never clears its 0.95 threshold, and the letter RF fires on only 3.6% of sentences. A **word-level cheap tier** — TF-IDF (1–2 grams) + VADER + keyword features through a 3-class logistic regression — replaces both. In a 2-tier cascade (cheap word tier → FinancialBERT), the cheap tier decides **36.6%** of clear-polarity calls at **97.2% accuracy** and the cascade scores **0.9512** vs **0.9558** for heavy-only (McNemar p = 0.15, not significant) while cutting transformer load by a third. One-third of calls never touch the transformer. Full evaluation in `results/cascade_benchmark.json` + `src/benchmark_cascade.py`.
 
-> **Cross-domain generalisation (2026-08-07).** The same cascade architecture was evaluated on **general news** (NewsMTSC, 1,067 held-out non-financial sentences). The cheap tier trained **only on FinancialPhraseBank** still beats the finance-tuned FinancialBERT on general news (0.42 vs 0.30 — the latter lands *below chance*, predicting neutral on 65.3% of clear sentences). Retrained on news it reaches 0.49. With a domain-appropriate general transformer the cascade again beats heavy-only (0.62 vs 0.58) while the cheap tier absorbs ~24% of calls at 91.8% accuracy. **The cascade approach is a general feature; the finance-tuned heavy is the domain-locked part.** Full evaluation in `results/general_news_benchmark.json` + `src/benchmark_general.py`.
+> **Cross-domain generalisation (2026-08-07).** The same cascade architecture was evaluated on **general news** (NewsMTSC, 1,067 held-out non-financial sentences). The cheap tier trained **only on FinancialPhraseBank** still beats the finance-tuned FinancialBERT on general news (0.42 vs 0.30 — the latter lands *below chance*, predicting neutral on 65.3% of clear sentences). Retrained on news it reaches 0.49. With a domain-appropriate general transformer, the news-trained-cheap cascade beats heavy-only (0.62 vs 0.58; exact McNemar p ≈ 8×10⁻⁷, +4.3 points [2.8, 4.9]) while the cheap tier absorbs ~24% of calls at 91.8% accuracy; the FPB-trained-cheap cascade's +2.2-point edge is not significant, and the two cascade variants are not established as different (p = 0.049, above the 0.01 threshold). **The cascade approach is a general feature; the finance-tuned heavy is the domain-locked part.** Full evaluation in `results/general_news_benchmark.json` + `src/benchmark_general.py`; significance audit in `src/robustness_analysis.py`.
 
 > **This repo is also a reference implementation of a research-artifact structure.** See [TEMPLATE.md](TEMPLATE.md) for the generic 5-layer structure, the 10 mandatory files, the 6 recommended files, the 4 anti-patterns, the 6-question principled evaluation checklist, the 8 figures standard, and the 18-item readiness checklist.
 
@@ -97,7 +97,7 @@ letter-valence-research/
 ├── research_report.md         ← full formal report (~22 KB)
 ├── lit_digest.md              ← per-paper digest of 5 foundational works
 ├── arxiv_paper.tex           ← arXiv preprint (LaTeX, NeurIPS-style)
-└── arxiv_paper.pdf           ← compiled version (14 pages, 635 KB)
+└── arxiv_paper.pdf           ← compiled version (15 pages, 637 KB)
 ```
 
 ## Reproducing the headline result
@@ -278,25 +278,41 @@ findings, with the significance that survives the numbers:
 2. **The finance-tuned heavy is the domain-locked part.** FinancialBERT collapses
    on general news — it predicts neutral on 65.3% of clear-polarity sentences and
    lands *below chance* (0.3041, CI [0.270, 0.341]). With a domain-appropriate
-   general heavy, **only the news-cheap cascade is a supported win**: 0.6190 vs
-   0.5760, **McNemar p ≈ 8×10⁻⁷**. The FPB-cheap cascade (0.5975) is numerically
-   higher than heavy-only but **not significant** (p = 0.02, above the 0.01
-   multiple-comparison threshold) — a point estimate, not an improvement. Both
-   cascades do beat their own cheap tiers (p ≈ 3×10⁻⁹ and 10⁻¹³). The cheap tier
-   absorbs 24.3% of clear calls (n = 158, CI [21.1, 27.7]) at 91.8% accuracy (CI
-   [86.4, 95.1]). A threshold sweep reaches 0.699 accuracy at a 53% heavy share —
-   the best point of an **in-sample** grid, an upper bound, not a held-out
-   estimate.
+    general heavy, **only the news-cheap cascade is a supported win**: 0.6190 vs
+    0.5760, **+4.3 points (paired-Wilson CI [2.8, 4.9], bootstrap [2.5, 6.3])**,
+    **McNemar p ≈ 8×10⁻⁷**.
+    The FPB-cheap cascade (0.5975) is numerically higher than heavy-only but **not
+    significant** (p = 0.02, above the 0.01 multiple-comparison threshold) — a
+    point estimate, not an improvement; the two cascade variants do not differ
+    reliably from each other at the pre-specified α = 0.01 level (p = 0.049;
+    95% bootstrap CI on the difference [+0.2, +4.2] points is marginal). Both cascades do beat their own cheap tiers
+    (p ≈ 3×10⁻⁹ and 10⁻¹³). The cheap tier
+    absorbs 24.3% of clear calls (n = 158, CI [21.1, 27.7]) at 91.8% accuracy (CI
+    [86.4, 95.1]). A threshold sweep reaches 0.699 accuracy at a 53% heavy share —
+    the best point of an **in-sample** grid, an upper bound, not a held-out
+    estimate.
 
 **Borderline nuance (n = 416 neutral sentences).** On general news the cascade is
 *not* a false-polarity reducer: routing barely moves the rate relative to the
 cheap tier (26.4 vs 26.7%, p = 1.0; 27.4 vs 30.5%, p = 0.25) and is slightly but
-significantly *above* heavy-only (p ≈ 2×10⁻⁴ / <10⁻⁴). Keyword's low 5.3% is
-bought by never committing — it predicts neutral on 90.5% of clear sentences
-(accuracy 0.066). Adjacent rates are within each other's 95% CI (±~4–5 points),
-so only the coarse ordering and the paired differences above are supported. This
+significantly *above* heavy-only (p ≈ 2×10⁻⁴ / <10⁻⁴). With only n = 416 the
+pairing is weak: at α = 0.01 / 80% power it can resolve differences of only
+~7 points, so the 0–3-point gaps to the cheap tier mean "indistinguishable
+here", not "equal"; the significant 3.1/4.1-point *worse*-than-heavy gaps rest
+on 13/0 and 17/0 discordant pairs, significant because perfectly one-directional.
+Keyword's low 5.3% is bought by never committing — it predicts neutral on 90.5%
+of clear sentences (accuracy 0.066). FinancialBERT's low 15.4% is partly the same
+out-of-domain conservatism — it labels 84.6% of the borderline sentences neutral
+(the same default that sinks it on the clear set). The paired tests resolve a
+staircase, not a flat ordering: keyword is significantly below heavy_fin
+(p ≈ 7×10⁻⁷), heavy_fin below heavy_gen (p ≈ 2×10⁻³), heavy_gen below the two
+cascades (13/0 and 17/0 discordant pairs), and cheap_fpb below VADER
+(p ≈ 4×10⁻³); the central plateau — heavy_gen through the cheap tiers (23–31%)
+— is not otherwise resolvable at n = 416 (adjacent members differ by less than
+the ~7-point resolution; pairwise p ≥ 0.25). This
 contrasts with the **finance** borderline set (n = 2,879), where the cascade cuts
-cheap-tier false polarity 19.6% → 7.7% (p ≈ 3×10⁻⁶¹) at a small real cost vs
+cheap-tier false polarity 19.6% → 7.7% (p ≈ 3×10⁻⁶¹, paired-difference CI [0.107,
+0.128]) at a small real cost vs
 heavy-only (p ≈ 4×10⁻²⁵). On general news the cascade's benefit is the clear-set
 accuracy gain + compute saving, not polarity-error reduction.
 
