@@ -311,9 +311,12 @@ Interpretation (significance = exact two-sided McNemar on the paired sentences):
 2. **The finance-tuned heavy is the domain-locked part.** FinancialBERT collapses on
    general news — it predicts neutral on 65.3% of clear-polarity sentences and lands
    *below chance* (0.3041). With a domain-appropriate heavy, **only the news-cheap
-   cascade** beats heavy-only (0.6190 vs 0.5760, McNemar p ≈ 8×10⁻⁷); the FPB-cheap
+   cascade** beats heavy-only (0.6190 vs 0.5760, +4.3 points, paired-Wilson CI
+   [2.8, 4.9] points, bootstrap CI [2.5, 6.3]; McNemar p ≈ 8×10⁻⁷); the FPB-cheap
    cascade (0.5975) is numerically higher but not significant (p = 0.02, above the
-   0.01 multiple-comparison threshold). The cheap tier absorbs 24.3% of calls (n =
+   0.01 multiple-comparison threshold); and the two cascade variants do not differ
+   reliably at the pre-specified α = 0.01 level (p = 0.049; 95% bootstrap CI on
+   the difference [+0.2, +4.2] points is marginal). The cheap tier absorbs 24.3% of calls (n =
    158, CI [21.1, 27.7]) at 91.8% accuracy. The threshold-sweep best (0.699) is an
    **in-sample** grid maximum, an upper bound, not a held-out estimate.
 
@@ -321,12 +324,22 @@ On the **borderline set** (n = 416 neutral sentences) the cascade is *not* a
 false-polarity reducer out of domain: versus its own cheap tier the rate is flat
 (26.4 vs 26.7%, p = 1.0; 27.4 vs 30.5%, p = 0.25) and versus heavy-only it is
 slightly but significantly *above* (26.4%/27.4% vs 23.3%, p ≈ 2×10⁻⁴ / <10⁻⁴).
-All rates carry ±~4–5-point Wilson CIs, so only the coarse ordering and these
-paired differences are supported. Keyword's 5.3% is trivially conservative
-(predicts neutral on 90.5% of the clear set). This is the opposite of the finance
+Power matters here: at n = 416 a paired test at α = 0.01 / 80% power resolves
+only ~7-point differences, so the 0–3-point gaps to the cheap tier mean
+"indistinguishable in this sample", not "equal"; the significant *worse*-than-heavy
+gaps rest on 13/0 and 17/0 discordant pairs, significant only because they are
+perfectly one-directional. Paired tests resolve a staircase, not a flat ordering:
+keyword is significantly below heavy_fin (p ≈ 7×10⁻⁷), heavy_fin below heavy_gen
+(p ≈ 2×10⁻³), heavy_gen below the cascades (13/0 and 17/0 discordant pairs), and
+cheap_fpb below VADER (p ≈ 4×10⁻³); the central plateau — heavy_gen through the
+cheap tiers (23–31%) — is not otherwise resolvable (adjacent members differ by
+less than the ~7-point resolution; pairwise p ≥ 0.25). Keyword's 5.3% is
+trivially conservative (predicts neutral on 90.5% of the clear set), and part of
+FinancialBERT's 15.4% is the same out-of-domain conservatism — it labels 84.6% of
+the borderline sentences neutral. This is the opposite of the finance
 borderline set (n = 2,879), where the cascade cuts cheap-tier false polarity
-19.6% → 7.7% (p ≈ 3×10⁻⁶¹) while remaining above heavy-only's 4.9% (p ≈
-4×10⁻²⁵).
+19.6% → 7.7% (p ≈ 3×10⁻⁶¹, paired-difference CI [0.107, 0.128]) while remaining
+above heavy-only's 4.9% (p ≈ 4×10⁻²⁵).
 
 The generalisation result is that the **cascade approach** — cheap word tier + routing
 → heavy fallback — is a general feature; the heavy transformer must match the domain.
@@ -341,12 +354,15 @@ The generalisation result is that the **cascade approach** — cheap word tier +
    evaluation uses one fixed split (n = 651 clear / 416 borderline) with no repeated
    resampling and no independent replication. Point differences smaller than the
    ~±4–5-point Wilson CIs are not separable, and the threshold-sweep maximum is
-   in-sample. The supported cross-domain claims are limited to the paired
-   differences with exact McNemar p ≤ 10⁻³ (news-cheap cascade vs heavy-only;
-   cheap tiers vs FinancialBERT; cascade-vs-cheap on the clear set) and the
+   in-sample. Power is limited on the borderline set: at n = 416 a paired test at
+   α = 0.01 / 80% power resolves only ~7-point differences, so null results there
+   mean "indistinguishable in this sample". The supported cross-domain claims are
+   limited to the paired differences with exact McNemar p ≤ 10⁻³ (news-cheap
+   cascade vs heavy-only, +4.3 points [2.8, 4.9]; cheap tiers vs FinancialBERT;
+   cascade-vs-cheap on the clear set) and the
    absence of a borderline false-polarity reduction.
 
-3. **Feature engineering informed by literature.** The 68 features were selected based on prior work (Adelman 2018, Aryani 2018, de Zubicaray 2024). This is informed feature engineering, not automated feature learning. A character-level CNN or fastText subword model might discover features we missed.
+4. **Feature engineering informed by literature.** The 68 features were selected based on prior work (Adelman 2018, Aryani 2018, de Zubicaray 2024). This is informed feature engineering, not automated feature learning. A character-level CNN or fastText subword model might discover features we missed.
 
 4. **The Random Forest is not interpretable.** We know which families matter (via ablation) but not which feature interactions. SHAP values would be a useful follow-up.
 
