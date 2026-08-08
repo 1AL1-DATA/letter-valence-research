@@ -307,7 +307,7 @@ Interpretation:
    still beats the finance-tuned FinancialBERT on general news (0.4209 vs 0.3041).
    Retrained on news it is the strongest non-transformer component (0.4931).
 2. **The finance-tuned heavy is the domain-locked part.** FinancialBERT collapses on
-   general news — it predicts neutral on 68.7% of clear-polarity sentences and lands
+   general news — it predicts neutral on 65.3% of clear-polarity sentences and lands
    *below chance* (0.3041). With a domain-appropriate heavy, the cascade again beats
    heavy-only (0.6190 vs 0.5760, McNemar p < 0.01) while the cheap tier absorbs ~24%
    of calls at 91.8% accuracy (threshold sweep reaches 0.70 accuracy).

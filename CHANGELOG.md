@@ -22,16 +22,51 @@ All notable changes to this project are documented here. The format follows
 - **`data/newsmtsc/`** — NewsMTSC train + devtest_rw JSONL with the dataset readme.
 - Updated README (TL;DR, tree, reproduction steps, "Does the cascade generalise
   beyond finance?" section, citation), `results/SUMMARY.md`, `METHODOLOGY.md`,
-  `linkedin_post.md`, `CHANGELOG.md`.
+  `blog_post.md`, `lit_digest.md`, `linkedin_post.md`, `research_report.md`,
+  `docs/architecture.md`, `data/README.md`, `CHANGELOG.md`, `LICENSE`
+  (NewsMTSC attribution).
 
 ### Findings (cross-domain)
 - The cheap word tier transfers out of finance: trained only on FPB it beats the
   finance-tuned FinancialBERT on general news (0.4209 vs 0.3041).
 - The finance-tuned heavy is the domain-locked part: FinancialBERT lands *below
-  chance* on general news (0.3041; predicts neutral on 68.7% of clear sentences).
+  chance* on general news (0.3041; predicts neutral on 65.3% of clear sentences).
 - With a domain-appropriate heavy the cascade again beats heavy-only
   (0.6190 vs 0.5760) while the cheap tier absorbs ~24% of calls at 91.8% accuracy.
 - The cascade *approach* is a general feature; the heavy model must match the domain.
+
+## [1.2.1] - 2026-08-08
+
+### Fixed
+- **Borderline false-polarity numbers corrected** in `README.md` and
+  `results/SUMMARY.md` (general-news section): the `_gen` variants were reported
+  with stale values. Corrected to the values in
+  `results/general_news_benchmark.json`: cascade (news cheap → gen heavy) 18.8% →
+  **26.4%**, cascade (FPB cheap → gen heavy) 22.4% → **27.4%**, general BERT
+  18.5% → **23.3%**.
+- **`heavy_fin` neutral rate on the clear set corrected** from 68.7% → **65.3%**
+  in README, SUMMARY, `research_report.md`, `METHODOLOGY.md`, `CHANGELOG.md`,
+  `linkedin_post.md` (matches `neutral_predicted` in the JSON).
+- **CSV misalignment bug in `src/benchmark_general.py`**: the clear-set `_v`
+  columns indexed the full dev-length valence arrays without applying
+  `clear_mask`, so those columns were shifted whenever neutral rows are
+  interspersed. Cascade labels and neutral-set columns were unaffected. Fixed,
+  re-ran the benchmark (JSON byte-identical), regenerated
+  `results/general_news_predictions.csv` and `figures/general_news_eval.png`
+  (its misclassification panel reads those columns).
+- **`[your-org]` placeholders replaced** with the real
+  `1AL1-DATA/letter-valence-research` URL in `CHANGELOG.md`, `research_report.md`,
+  `arxiv_paper.tex`.
+
+### Added
+- **`arxiv_paper.tex` / `arxiv_paper.pdf` updated** with a new
+  "Application: a two-tier sentiment cascade" section: the retired 3-tier design,
+  the word-level cheap tier, FPB results (0.9512 vs 0.9558, McNemar p = 0.15;
+  cheap tier 36.6% @ 97.2%), the cross-domain NewsMTSC evaluation
+  (clear-polarity table, borderline false-polarity table, McNemar p = 10⁻⁶,
+  cheap tier 24.3% @ 91.8%), and full reproduction commands. Abstract updated;
+  NewsMTSC citation added.
+- **`CITATION.cff`** bumped to v1.2.0 (2026-08-07) with the NewsMTSC reference.
 
 ## [1.1.0] - 2026-08-06
 
@@ -98,6 +133,7 @@ All notable changes to this project are documented here. The format follows
 - Hierarchical classification for long documents: split into sentences, aggregate predictions.
 - Ablation on aggregation strategy: mean/max/min/std vs learned attention.
 
-[1.2.0]: https://github.com/[your-org]/letter-valence-research/releases/tag/v1.2.0
-[1.1.0]: https://github.com/[your-org]/letter-valence-research/releases/tag/v1.1.0
-[1.0.0]: https://github.com/[your-org]/letter-valence-research/releases/tag/v1.0.0
+[1.2.1]: https://github.com/1AL1-DATA/letter-valence-research/releases/tag/v1.2.1
+[1.2.0]: https://github.com/1AL1-DATA/letter-valence-research/releases/tag/v1.2.0
+[1.1.0]: https://github.com/1AL1-DATA/letter-valence-research/releases/tag/v1.1.0
+[1.0.0]: https://github.com/1AL1-DATA/letter-valence-research/releases/tag/v1.0.0

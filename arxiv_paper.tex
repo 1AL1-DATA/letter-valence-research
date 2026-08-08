@@ -35,7 +35,7 @@
 \maketitle
 
 \begin{abstract}
-We compute 68 numerical features for each of 13,914 English lemmas in the Warriner affective norms and for each of 4,929 unique words in the FinancialPhraseBank. Features span 12 families: alphabet position aggregations, modular arithmetic (gematria-style), letter frequency, bigram statistics, phonetic (CMUdict), shape, length, group attractors, spectral analysis (Discrete Fourier Transform), compression (gzip), number-theoretic, and symmetry/run-length. A random forest trained on these features, aggregated across the words of each of 1,967 financial sentences, reaches $0.7377 \pm 0.0058$ 5-fold cross-validation accuracy ($F_1 = 0.835$) on the binary positive-vs-negative task --- significantly above the 0.693 class-prior baseline (permutation test with 50 shuffles, $p < 0.0001$). The strongest single feature family is the spectral (DFT) family, which alone reaches $0.7346$ accuracy. The ``gematria hypothesis'' --- that modular arithmetic on letter positions predicts sentiment --- is not supported: the relevant modular features do not survive Bonferroni correction at the word level and contribute marginally to the article-level model. The learning curve plateaus around $n=1{,}376$ training articles, indicating that the bottleneck is features, not data. The formula is most useful as a fast pre-filter for a more expensive sentiment model.
+We compute 68 numerical features for each of 13,914 English lemmas in the Warriner affective norms and for each of 4,929 unique words in the FinancialPhraseBank. Features span 12 families: alphabet position aggregations, modular arithmetic (gematria-style), letter frequency, bigram statistics, phonetic (CMUdict), shape, length, group attractors, spectral analysis (Discrete Fourier Transform), compression (gzip), number-theoretic, and symmetry/run-length. A random forest trained on these features, aggregated across the words of each of 1,967 financial sentences, reaches $0.7377 \pm 0.0058$ 5-fold cross-validation accuracy ($F_1 = 0.835$) on the binary positive-vs-negative task --- significantly above the 0.693 class-prior baseline (permutation test with 50 shuffles, $p < 0.0001$). The strongest single feature family is the spectral (DFT) family, which alone reaches $0.7346$ accuracy. The ``gematria hypothesis'' --- that modular arithmetic on letter positions predicts sentiment --- is not supported: the relevant modular features do not survive Bonferroni correction at the word level and contribute marginally to the article-level model. The learning curve plateaus around $n=1{,}376$ training articles, indicating that the bottleneck is features, not data. The formula is most useful as a fast pre-filter for a more expensive sentiment model: we evaluate a two-tier cascade built on this idea and show that its cheap word-level tier transfers out of finance, while the domain-locked finance-tuned transformer is the component that fails on general news.
 \end{abstract}
 
 % Keywords (just a paragraph, not the NeurIPS-specific environment)
@@ -249,6 +249,144 @@ Trained on only one family at a time, the spectral family (F9) reaches 0.7346 ac
 \end{figure}
 
 % ======================================================================
+\section{Application: a two-tier sentiment cascade}
+% ======================================================================
+
+The natural use case for a fast pre-filter is a sentiment \emph{cascade}: a cheap
+component routes confident decisions and only the ambiguous remainder reaches an
+expensive transformer. This section reports the deployed design and a
+reproducible cross-domain evaluation. Every number in this section is generated
+by two scripts from the repository --- \texttt{python -m src.benchmark\_cascade}
+(FinancialPhraseBank) and \texttt{python -m src.benchmark\_general} (NewsMTSC)
+--- and written to \texttt{results/cascade\_benchmark.json} and
+\texttt{results/general\_news\_benchmark.json} respectively, alongside
+per-instance prediction CSVs. Both scripts pin model IDs and thresholds in
+source (see below), so the tables here can be regenerated verbatim.
+
+\subsection{Design}
+
+An earlier three-tier design (DFT letter probe $\rightarrow$ letter random forest
+$\rightarrow$ FinancialBERT) was retired after benchmark evidence: the DFT probe
+never fired (maximum $|v| = 0.922 < 0.95$ threshold) and the letter random forest
+decided only 3.6\% of sentences. The production cascade is now \textbf{two tiers}:
+
+\begin{itemize}
+\item \textbf{Cheap tier} --- word-level: TF-IDF 1--2 grams + VADER + keyword
+  lexicon features concatenated into a 3-class logistic regression. It decides
+  when $|v| \geq 0.6$ (routing threshold \texttt{CHEAP\_THRESHOLD}=0.6; label
+  band \texttt{LABEL\_BAND}=0.1 on the quadratic score
+  $\operatorname{sign}(v)\,v^2$).
+\item \textbf{Heavy tier} --- a fine-tuned 3-class transformer scored on the
+  same quadratic-score interface, with VADER as last-resort fallback.
+\end{itemize}
+
+On the FinancialPhraseBank clear-polarity set (n = 1,967, 5-fold CV, heavy =
+\texttt{ahmedrachid/FinancialBERT-Sentiment-Analysis}) the cascade reaches
+\textbf{0.9512} accuracy (macro-F1 0.9643) versus \textbf{0.9558} heavy-only
+(macro-F1 0.9716): an exact McNemar test gives $p = 0.15$ (not significant), so
+the cascade matches the transformer on accuracy while the cheap tier decides
+\textbf{36.6\% of calls at 97.2\%} accuracy --- roughly a third of the
+transformer's load absorbed at ~1\% of its compute. Full per-method metrics
+(negative/positive precision, recall, F1) are in \texttt{results/cascade\_benchmark.json}.
+
+\subsection{Cross-domain generalisation (NewsMTSC)}
+
+To test whether the cascade is a general \emph{approach} rather than a
+finance-specific trick, the identical architecture was evaluated on
+\textbf{NewsMTSC}~\citep{hamborg2021} --- 5-coder-labelled 3-class sentence
+sentiment from real-world general news (AllSides), held-out \texttt{devtest\_rw}
+split (n = 1,067: 651 clear-polarity + 416 neutral). Two cheap-tier variants and
+two fixed heavy tiers were tested:
+
+\begin{itemize}
+\item \textbf{cheap\_fpb} --- cheap tier trained \emph{only} on the 4,846
+  FinancialPhraseBank sentences (cross-domain transfer, zero general-news
+  supervision).
+\item \textbf{cheap\_news} --- same architecture retrained on the 7,758
+  NewsMTSC train sentences (in-domain reference).
+\item \textbf{heavy\_fin} = \texttt{ahmedrachid/FinancialBERT-Sentiment-Analysis};
+  \textbf{heavy\_gen} = \texttt{cardiffnlp/twitter-roberta-base-sentiment-latest}.
+\end{itemize}
+
+\paragraph{Clear-polarity set (n = 651).}
+Table~\ref{tab:newsmt_clear} reports accuracy and macro-F1.
+
+\begin{table}[ht]
+\centering
+\caption{Cross-domain cascade on NewsMTSC general news, clear-polarity set (n = 651). All methods evaluated on identical held-out sentences.}
+\label{tab:newsmt_clear}
+\small
+\begin{tabular}{lcc}
+\toprule
+Method & Accuracy & Macro-F1 \\
+\midrule
+Keyword lexicon & 0.0661 & 0.1199 \\
+FinancialBERT (heavy\_fin) & 0.3041 & 0.4581 \\
+Cheap tier trained on FPB only (cheap\_fpb) & 0.4209 & 0.5523 \\
+VADER & 0.4685 & 0.5744 \\
+Cheap tier trained on news (cheap\_news) & 0.4931 & 0.6069 \\
+General BERT (heavy\_gen) & 0.5760 & 0.6641 \\
+Cascade (cheap\_fpb $\rightarrow$ heavy\_gen) & 0.5975 & 0.6741 \\
+\textbf{Cascade (cheap\_news $\rightarrow$ heavy\_gen)} & \textbf{0.6190} & \textbf{0.6940} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two findings follow:
+
+1. \textbf{The cheap word tier transfers out of finance.} Trained on nothing but
+   FinancialPhraseBank, it still beats the finance-tuned FinancialBERT on
+   general news (0.4209 vs.\ 0.3041) and approaches VADER; retrained on news it
+   is the strongest single non-transformer component (0.4931).
+2. \textbf{The finance-tuned heavy is the domain-locked part.} FinancialBERT
+   collapses on general news --- it predicts neutral on 65.3\% of the 651
+   clear-polarity sentences (its \texttt{neutral\_predicted} fraction) and lands
+   below chance (0.3041). With a domain-appropriate heavy, the cascade again
+   beats heavy-only: \textbf{0.6190 vs.\ 0.5760} (exact McNemar $p = 10^{-6}$,
+   significant at the 0.01 level), while the cheap tier absorbs 24.3\% of calls
+   at 91.8\% accuracy. A threshold sweep (routing threshold $\in \{0.4,\dots,1.0\}$,
+   band $\in \{0.05,0.1,0.15\}$, re-routed on stored per-instance valences)
+   reaches 0.699 cascade accuracy at a 53\% heavy-tier share. The cascade
+   \emph{approach} generalises; the heavy model must match the domain.
+
+\paragraph{Borderline set (n = 416 neutral sentences).}
+Table~\ref{tab:newsmt_border} reports the false-polarity rate (fraction of
+genuinely neutral sentences labelled positive or negative). The cheap tiers are
+the most polarity-prone components; routing them through either heavy tier
+reduces false polarity on the FPB-trained variants but is roughly neutral on the
+news-trained variant, mirroring the finance-only result that the cascade trades a
+small polarity cost for a large compute saving.
+
+\begin{table}[ht]
+\centering
+\caption{False-polarity rate on 416 held-out neutral NewsMTSC sentences (lower is better).}
+\label{tab:newsmt_border}
+\small
+\begin{tabular}{lc}
+\toprule
+Method & False polarity \\
+\midrule
+Keyword lexicon & 5.3\% \\
+Heavy-only (heavy\_fin) & 15.4\% \\
+General BERT (heavy\_gen) & 23.3\% \\
+\textbf{Cascade (cheap\_news $\rightarrow$ heavy\_gen)} & \textbf{26.4\%} \\
+Cheap tier trained on news (cheap\_news) & 26.7\% \\
+Cascade (cheap\_fpb $\rightarrow$ heavy\_gen) & 27.4\% \\
+Cheap tier trained on FPB only (cheap\_fpb) & 30.5\% \\
+VADER & 36.5\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Reproduction: \texttt{python -m src.benchmark\_general} requires the NewsMTSC
+split files (\texttt{data/newsmtsc/devtest\_rw.jsonl},
+\texttt{data/newsmtsc/train.jsonl}) and the two pinned HuggingFace model IDs
+above; it writes \texttt{results/general\_news\_benchmark.json} and
+\texttt{results/general\_news\_predictions.csv}. A figure comparing all ten
+methods (accuracy $\pm$ Wilson 95\% CI, misclassification breakdown, tier
+routing, threshold sweep) is \texttt{figures/general\_news\_eval.png}.
+
+% ======================================================================
 \section{Discussion}
 % ======================================================================
 
@@ -298,7 +436,7 @@ The negative result on the gematria hypothesis is, in our view, the most useful 
 All code, data, and intermediate outputs are available at the project repository:
 
 \begin{itemize}
-\item Repository: \texttt{[your-org]/letter-valence-research}
+\item Repository: \texttt{1AL1-DATA/letter-valence-research}
 \item Reproduction: \texttt{pip install -r requirements.txt} then \texttt{python -m src.analyze} (10 minutes)
 \item Unit tests: \texttt{python -m unittest discover tests/} (33 tests, 1.7s)
 \item Notebook: \texttt{notebooks/01\_reproduce\_main\_result.ipynb}
@@ -347,6 +485,11 @@ G.~I. de Zubicaray and J.~A. Hinojosa.
 C.~Hutto and E.~Gilbert.
 \newblock VADER: A parsimonious rule-based model for sentiment analysis of social media text.
 \newblock In \emph{Proceedings of the ICWSM}, 2014.
+
+\bibitem[Hamborg et al.(2021)]{hamborg2021}
+F.~Hamborg, T.~Breitinger, and S.~Donnay.
+\newblock NewsMTSC: A dataset for fine-grained, event-driven emotion analysis on news articles.
+\newblock In \emph{Findings of the EACL}, 2021.
 
 \bibitem[Köhler(1929)]{kohler1929}
 W.~Köhler.

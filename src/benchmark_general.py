@@ -403,12 +403,12 @@ def main() -> None:
     for i in range(len(clear)):
         row = {
             "set": "clear", "id": int(clear["id"].iloc[i]), "true": int(y_code[i]),
-            "cheap_fpb_v": round(float(cheap_fpb_v[i]), 6),
-            "cheap_news_v": round(float(cheap_news_v[i]), 6),
-            "heavy_fin_v": round(float(heavy_v_dev["fin"][i]), 6),
-            "heavy_gen_v": round(float(heavy_v_dev["gen"][i]), 6),
-            "vader_v": round(float(vader_v_dev[i]), 6),
-            "kw_v": round(float(kw_v_dev[i]), 6),
+            "cheap_fpb_v": round(float(cheap_fpb_v[clear_mask][i]), 6),
+            "cheap_news_v": round(float(cheap_news_v[clear_mask][i]), 6),
+            "heavy_fin_v": round(float(heavy_v_dev["fin"][clear_mask][i]), 6),
+            "heavy_gen_v": round(float(heavy_v_dev["gen"][clear_mask][i]), 6),
+            "vader_v": round(float(vader_v_dev[clear_mask][i]), 6),
+            "kw_v": round(float(kw_v_dev[clear_mask][i]), 6),
         }
         for ckey, (cc, tiers) in cascade_labels.items():
             row[f"{ckey}_label"] = int(cc[i])

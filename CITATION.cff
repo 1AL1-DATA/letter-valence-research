@@ -4,8 +4,8 @@ message: |
   as below. The BibTeX entry below is the canonical citation.
 type: software
 title: "Letter-derived numerical features of words and their correlation with sentiment"
-version: 1.0.0
-date-released: 2026-08-05
+version: 1.2.0
+date-released: 2026-08-07
 license:
   - id: MIT
     url: "https://opensource.org/licenses/MIT"
@@ -82,3 +82,14 @@ references:
     volume: "13"
     issue: "6"
     year: 2018
+  - type: article
+    title: "NewsMTSC: A dataset for fine-grained, event-driven emotion analysis on news articles"
+    authors:
+      - family-names: Hamborg
+        given-names: Felix
+      - family-names: Breitinger
+        given-names: Tim
+      - family-names: Donnay
+        given-names: Stefano
+    journal: "Findings of the Association for Computational Linguistics: EACL"
+    year: 2021

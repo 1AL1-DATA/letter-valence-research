@@ -6,7 +6,7 @@
 
 > **Cascade follow-up (2026-08-07).** When the letter model was deployed as the cheap tier of a real sentiment engine, it turned out to be **strictly dominated**: the DFT probe's max `|v|` (0.922) never clears its 0.95 threshold, and the letter RF fires on only 3.6% of sentences. A **word-level cheap tier** — TF-IDF (1–2 grams) + VADER + keyword features through a 3-class logistic regression — replaces both. In a 2-tier cascade (cheap word tier → FinancialBERT), the cheap tier decides **36.6%** of clear-polarity calls at **97.2% accuracy** and the cascade scores **0.9512** vs **0.9558** for heavy-only (McNemar p = 0.15, not significant) while cutting transformer load by a third. One-third of calls never touch the transformer. Full evaluation in `results/cascade_benchmark.json` + `src/benchmark_cascade.py`.
 
-> **Cross-domain generalisation (2026-08-07).** The same cascade architecture was evaluated on **general news** (NewsMTSC, 1,067 held-out non-financial sentences). The cheap tier trained **only on FinancialPhraseBank** still beats the finance-tuned FinancialBERT on general news (0.42 vs 0.30 — the latter lands *below chance*, predicting neutral on 68.7% of clear sentences). Retrained on news it reaches 0.49. With a domain-appropriate general transformer the cascade again beats heavy-only (0.62 vs 0.58) while the cheap tier absorbs ~24% of calls at 91.8% accuracy. **The cascade approach is a general feature; the finance-tuned heavy is the domain-locked part.** Full evaluation in `results/general_news_benchmark.json` + `src/benchmark_general.py`.
+> **Cross-domain generalisation (2026-08-07).** The same cascade architecture was evaluated on **general news** (NewsMTSC, 1,067 held-out non-financial sentences). The cheap tier trained **only on FinancialPhraseBank** still beats the finance-tuned FinancialBERT on general news (0.42 vs 0.30 — the latter lands *below chance*, predicting neutral on 65.3% of clear sentences). Retrained on news it reaches 0.49. With a domain-appropriate general transformer the cascade again beats heavy-only (0.62 vs 0.58) while the cheap tier absorbs ~24% of calls at 91.8% accuracy. **The cascade approach is a general feature; the finance-tuned heavy is the domain-locked part.** Full evaluation in `results/general_news_benchmark.json` + `src/benchmark_general.py`.
 
 > **This repo is also a reference implementation of a research-artifact structure.** See [TEMPLATE.md](TEMPLATE.md) for the generic 5-layer structure, the 10 mandatory files, the 6 recommended files, the 4 anti-patterns, the 6-question principled evaluation checklist, the 8 figures standard, and the 18-item readiness checklist.
 
@@ -33,7 +33,8 @@ letter-valence-research/
 │   ├── cmudict.dict           ← CMU Pronouncing Dictionary (135k words)
 │   ├── letter_freqs.json      ← derived: letter unigram + bigram counts
 │   ├── words_alpha.txt         ← 370k-word English word list
-│   └── Sentences_50Agree.txt  ← source for articles_binary.csv
+│   ├── Sentences_50Agree.txt  ← source for articles_binary.csv
+│   └── newsmtsc/              ← NewsMTSC train + devtest_rw JSONL (general news)
 ├── src/
 │   ├── __init__.py
 │   ├── features.py            ← 68 letter-derived features in 12 families
@@ -48,7 +49,9 @@ letter-valence-research/
 │   ├── benchmark_cascade.py   ← 2-tier cascade eval (cheap word tier → heavy)
 │   ├── benchmark_general.py   ← cross-domain cascade eval on general news
 │   ├── figures_cascade.py     ← 4-panel cascade figure
-│   └── figures_general.py     ← 4-panel general-news cascade figure
+│   ├── figures_general.py     ← 4-panel general-news cascade figure
+│   ├── animate.py             ← 3D spectral waterfall + word-trajectory animations
+│   └── style.py               ← shared palette + matplotlib style
 ├── tests/
 │   ├── test_features.py       ← 33 unit tests, all passing
 │   └── README.md
@@ -68,7 +71,7 @@ letter-valence-research/
 │   ├── general_news_predictions.csv ← per-instance valences + routing (news)
 │   ├── summary.json           ← machine-readable headline numbers
 │   └── SUMMARY.md             ← one-page plain-English summary
-├── figures/                   ← 14 PNG charts (300 dpi)
+├── figures/                   ← 15 PNG charts (300 dpi) + animations
 │   ├── headline_summary.png   ← 5-model comparison bar chart
 │   ├── method_comparison.png   ← box plot of 3 classifiers
 │   ├── family_ablation.png     ← leave-one-family-out results
@@ -83,7 +86,8 @@ letter-valence-research/
 │   ├── shap_bar.png            ← SHAP mean |SHAP| per feature
 │   ├── shap_waterfall.png      ← SHAP waterfall: one pos + one neg example
 │   ├── cascade_sentiment_eval.png ← 2-tier cascade evaluation (4 panels)
-│   └── general_news_eval.png  ← cross-domain cascade evaluation (4 panels)
+│   ├── general_news_eval.png  ← cross-domain cascade evaluation (4 panels)
+│   └── animations/            ← 3D spectral waterfall + word-trajectory MP4s
 ├── models/
 │   └── letter_sentiment_rf.pkl   ← trained RF model (3.7 MB)
 ├── docs/
@@ -93,7 +97,7 @@ letter-valence-research/
 ├── research_report.md         ← full formal report (~22 KB)
 ├── lit_digest.md              ← per-paper digest of 5 foundational works
 ├── arxiv_paper.tex           ← arXiv preprint (LaTeX, NeurIPS-style)
-└── arxiv_paper.pdf           ← compiled version (10 pages, 618 KB)
+└── arxiv_paper.pdf           ← compiled version (13 pages, 623 KB)
 ```
 
 ## Reproducing the headline result
@@ -252,10 +256,10 @@ fixed heavy tiers:
 |---|---|---|---|
 | Cheap tier trained on FPB only | 0.4209 | 0.5523 | 30.5% |
 | Cheap tier trained on news | 0.4931 | 0.6069 | 26.7% |
-| **Cascade (FPB cheap → gen heavy)** | **0.5975** | 0.6741 | 22.4% |
-| **Cascade (news cheap → gen heavy)** | **0.6190** | 0.6940 | 18.8% |
+| **Cascade (FPB cheap → gen heavy)** | **0.5975** | 0.6741 | 27.4% |
+| **Cascade (news cheap → gen heavy)** | **0.6190** | 0.6940 | 26.4% |
 | FinancialBERT alone (heavy_fin) | 0.3041 | 0.4581 | 15.4% |
-| General BERT alone (heavy_gen) | 0.5760 | 0.6641 | 18.5% |
+| General BERT alone (heavy_gen) | 0.5760 | 0.6641 | 23.3% |
 | VADER | 0.4685 | 0.5744 | 36.5% |
 | Keyword lexicon | 0.0661 | 0.1199 | 5.3% |
 
@@ -266,7 +270,7 @@ Two honest findings:
    news (0.4209 vs 0.3041) and approaches VADER; retrained on news it is the
    strongest single non-transformer component (0.4931).
 2. **The finance-tuned heavy is the domain-locked part.** FinancialBERT collapses on
-   general news — it predicts neutral on 68.7% of clear-polarity sentences and lands
+   general news — it predicts neutral on 65.3% of clear-polarity sentences and lands
    *below chance* (0.3041). With a domain-appropriate general heavy, the cascade again
    beats heavy-only (0.6190 vs 0.5760, McNemar p < 0.01) while the cheap tier absorbs
    ~24% of calls at 91.8% accuracy (threshold sweep reaches 0.70 accuracy). The
