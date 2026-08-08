@@ -69,6 +69,31 @@ All notable changes to this project are documented here. The format follows
   NewsMTSC citation added.
 - **`CITATION.cff`** bumped to v1.2.0 (2026-08-07) with the NewsMTSC reference.
 
+## [1.2.5] - 2026-08-08
+
+### Changed (reader-facing README)
+- **README opening rewritten for a general audience.** The dense TL;DR
+  blockquote is replaced with a reader-friendly section following a
+  short-answer → plain-terms → "does it matter" → Q&A-numbers → honest-limits →
+  collapsible-technical-details structure. All numbers verified against
+  `results/*.json` / `.csv`; the detailed sections (headline-number table,
+  feature families, findings, cascade) remain below and are cross-linked.
+
+### Fixed (doc-vs-artifact discrepancies)
+- **`period_mod5` removed from `research_report.md`, `results/SUMMARY.md`,
+  `blog_post.md`.** The feature does not exist in `results/word_level_correlations.csv`
+  (it is not among the 68 features), and its cited r = -0.027 / p = 1.6e-3 match
+  no real feature; the r/p appear borrowed from non-modular features
+  (`autocorr_lag1`/`gzip_size`). The "just at the edge of Bonferroni" framing was
+  wrong twice over: the true closest modular feature is `is_prime_sum`
+  (r = -0.016, p ≈ 0.067), far from significance.
+- **`results/SUMMARY.md` Bonferroni table corrected.** It claimed "6 features
+  survive" with "the best explains 0.5% of variance"; the correct numbers are
+  **8 survivors** (best: `vowel_ratio`, ~0.24% of variance). The table listed
+  `autocorr_lag1`, `gzip_size`, `n_runs` — none of which survive — and omitted
+  `vowel_ratio`/`consonant_ratio` (the two strongest). Replaced with the true
+  8-feature survivor table.
+
 ## [1.2.4] - 2026-08-08
 
 ### Fixed (doc-vs-artifact discrepancies)
