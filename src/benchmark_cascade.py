@@ -281,24 +281,26 @@ def main() -> None:
         }
 
     # ---- threshold sweep (cheap re-route on stored valences) ----
+    # Routing-only: the label band is held at LABEL_BAND. Varying the band would
+    # confound routing with the label function (a narrower band trivially raises
+    # clear-set accuracy on a set with no neutrals), so it is not swept.
     print("Threshold sweep...")
     sweep = []
     best = None
     for ct in (0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0):
-        for band in (0.05, 0.1, 0.15):
-            code, tiers_s = cascade_predict(
-                cheap_v_clear, heavy_v_clear, vader_v_clear, n_words_clear,
-                threshold=ct, band=band,
-            )
-            acc = float((code == y_code).mean())
-            heavy_share = float(np.mean([t == "heavy" for t in tiers_s]))
-            entry = {
-                "cheap_threshold": ct, "band": band, "accuracy": round(acc, 4),
-                "heavy_share": round(heavy_share, 4),
-            }
-            sweep.append(entry)
-            if best is None or acc > best["accuracy"]:
-                best = entry
+        code, tiers_s = cascade_predict(
+            cheap_v_clear, heavy_v_clear, vader_v_clear, n_words_clear,
+            threshold=ct, band=LABEL_BAND,
+        )
+        acc = float((code == y_code).mean())
+        heavy_share = float(np.mean([t == "heavy" for t in tiers_s]))
+        entry = {
+            "cheap_threshold": ct, "band": LABEL_BAND, "accuracy": round(acc, 4),
+            "heavy_share": round(heavy_share, 4),
+        }
+        sweep.append(entry)
+        if best is None or acc > best["accuracy"]:
+            best = entry
     sweep.sort(key=lambda e: e["accuracy"], reverse=True)
 
     # ---- borderline (neutral) set, deployed components ----

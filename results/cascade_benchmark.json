@@ -124,58 +124,52 @@
   "threshold_sweep_top": [
     {
       "cheap_threshold": 0.8,
-      "band": 0.05,
-      "accuracy": 0.9583,
+      "band": 0.1,
+      "accuracy": 0.9558,
       "heavy_share": 0.8831
     },
     {
       "cheap_threshold": 0.9,
-      "band": 0.05,
-      "accuracy": 0.9583,
+      "band": 0.1,
+      "accuracy": 0.9558,
       "heavy_share": 0.9781
     },
     {
       "cheap_threshold": 1.0,
-      "band": 0.05,
-      "accuracy": 0.9583,
+      "band": 0.1,
+      "accuracy": 0.9558,
       "heavy_share": 1.0
     },
     {
       "cheap_threshold": 0.7,
-      "band": 0.05,
-      "accuracy": 0.9563,
+      "band": 0.1,
+      "accuracy": 0.9537,
       "heavy_share": 0.7524
     },
     {
-      "cheap_threshold": 0.8,
+      "cheap_threshold": 0.6,
       "band": 0.1,
-      "accuracy": 0.9558,
-      "heavy_share": 0.8831
+      "accuracy": 0.9512,
+      "heavy_share": 0.6345
     },
     {
-      "cheap_threshold": 0.9,
+      "cheap_threshold": 0.5,
       "band": 0.1,
-      "accuracy": 0.9558,
-      "heavy_share": 0.9781
+      "accuracy": 0.9497,
+      "heavy_share": 0.5145
     },
     {
-      "cheap_threshold": 1.0,
+      "cheap_threshold": 0.4,
       "band": 0.1,
-      "accuracy": 0.9558,
-      "heavy_share": 1.0
-    },
-    {
-      "cheap_threshold": 0.8,
-      "band": 0.15,
-      "accuracy": 0.9548,
-      "heavy_share": 0.8831
+      "accuracy": 0.9441,
+      "heavy_share": 0.4011
     }
   ],
   "threshold_sweep_best": {
-    "cheap_threshold": 1.0,
-    "band": 0.05,
-    "accuracy": 0.9583,
-    "heavy_share": 1.0
+    "cheap_threshold": 0.8,
+    "band": 0.1,
+    "accuracy": 0.9558,
+    "heavy_share": 0.8831
   },
   "borderline_set": {
     "cheap": {
@@ -223,5 +217,6 @@
       "n": 2783,
       "share": 0.9667
     }
-  }
+  },
+  "threshold_sweep_note": "Band held fixed at LABEL_BAND=0.1 (routing-only sweep). A band-varying sweep confounds routing with the label band: a narrower band raises accuracy on the clear-only set trivially. The band-varying maximum (0.699 general / 0.9583 FPB) was removed as an artifact."
 }

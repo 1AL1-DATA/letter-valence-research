@@ -90,7 +90,7 @@ All notable changes to this project are documented here. The format follows
 - **Effect-size CIs added for the headline win**: +4.3 points (0.6190 vs 0.5760)
   with paired-Wilson CI [2.8, 4.9] and a 20,000-resample bootstrap CI [2.5, 6.3].
 - **cascade_news vs cascade_fpb explicitly reported as marginal**: clear-set
-  p = 0.049 (above the pre-specified 0.01 threshold; 95% bootstrap CI on the
+  p = 0.049 (above the corrected 0.01 threshold; 95% bootstrap CI on the
   difference [+0.2, +4.2] points sits at the boundary of zero) and borderline
   p = 0.42 — the two cascade variants are not established as different, so
   0.6190 vs 0.5975 is a marginal, not a supported, difference.
@@ -107,22 +107,41 @@ All notable changes to this project are documented here. The format follows
 - **"Adjacent rates not separable" claim corrected** (it was too broad):
   paired tests resolve a staircase, not a flat ordering — keyword is
   significantly below heavy_fin (p ≈ 7×10⁻⁷), heavy_fin below heavy_gen
-  (p ≈ 2×10⁻³), heavy_gen below the cascades (13/0 and 17/0 discordant pairs),
-  and cheap_fpb below VADER (p ≈ 4×10⁻³) — while the central plateau
-  (heavy_gen through the cheap tiers, 23–31%) is not otherwise resolvable at
-  n = 416 (pairwise p ≥ 0.25). Corrected in `README.md`, `results/SUMMARY.md`,
-  `METHODOLOGY.md`, `research_report.md`, `arxiv_paper.tex`.
+  (p ≈ 2×10⁻³), heavy_gen below the cascades (13/0 and 17/0 one-directional
+  discordant pairs), and cheap_fpb below VADER (p ≈ 4×10⁻³) — while the
+  cascade-vs-cheap-tier steps (0.2–3.1 points, p = 1.0 / 0.86 / 0.25) are
+  below the ~7-point resolution of those comparisons and are not supported.
+  The resolvable difference is comparison-specific (≈ 2.8·√m/n points for m
+  discordant pairs: ~7 points for m ≈ 110, only ~2.4–2.8 for m = 13/17), so
+  the earlier blanket "pairwise p ≥ 0.25 across the plateau" phrasing was
+  dropped as self-contradictory. Corrected in `README.md`,
+  `results/SUMMARY.md`, `METHODOLOGY.md`, `research_report.md`,
+  `arxiv_paper.tex`.
 - **cascade_news vs cascade_fpb corrected to "marginal", not "unresolved"**:
-  exact p = 0.049 (above the pre-specified 0.01 threshold) but the 95%
+  exact p = 0.049 (above the corrected 0.01 threshold) but the 95%
   bootstrap CI on the difference is [+0.2, +4.2] points (40/40 resamples
   exclude zero) — the difference is at the boundary of zero, not established
   at the strict level, but not flat either.
 - **Wilson 95% CIs added** to every accuracy and false-polarity table and the
   key point estimates (24.3% share n = 158, CI [21.1, 27.7]; 91.8% accuracy CI
   [86.4, 95.1]; all borderline rates ±~4–5 pts on n = 416).
-- **Threshold sweep flagged as in-sample**: the 0.699 (general) and 0.9583 (FPB,
-  at heavy share ≈ 1.0) best points are grid maxima on the fixed split, stated
-  as upper bounds, not held-out estimates.
+- **Threshold sweep corrected to routing-only (band confound removed)**: the
+  stored sweep varied `(cheap_threshold, label_band)` and its maxima — 0.699
+  (general) and 0.9583 (FPB, at heavy share ≈ 1.0) — were label-band artifacts
+  (a narrower band trivially raises accuracy on a clear-only set; the FPB
+  "maximum" was literally heavy-only with band 0.05). Re-run with the band held
+  fixed at 0.1: best general point 0.654 (news-cheap, ct = 0.4, 53% heavy;
+  0.647 for FPB-cheap) vs 0.619 default, and FPB best = 0.9558 = heavy-only
+  exactly. All points remain in-sample grid maxima. `benchmark_general.py`,
+  `benchmark_cascade.py`, both JSONs, and all docs updated.
+- **α = 0.01 now justified as a procedure, not a claim of pre-registration**:
+  phrased as a Bonferroni correction over the five cascade-vs-baseline pairwise
+  comparisons at the conventional 0.05 level; the word "pre-specified" (which
+  implied pre-registration) removed from `README.md`, `METHODOLOGY.md`,
+  `results/SUMMARY.md`, `research_report.md`, `arxiv_paper.tex`.
+- **Borderline table caption fixed**: CI overlap alone does not settle
+  separability (heavy_gen and the cascades have overlapping CIs yet are
+  separable by the paired tests).
 - **Keyword caveat added**: its low borderline false-polarity (5.3% / 6.6%) is
   trivially conservative — it predicts neutral on 90.5% (72.7%) of the clear set
   (accuracy 0.066 / 0.191).

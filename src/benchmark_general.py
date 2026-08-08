@@ -318,24 +318,27 @@ def main() -> None:
             }
         tier_routing[ckey] = tr
 
-    print("Threshold sweep (re-routed on stored valences)...")
+    print("Threshold sweep (re-routed on stored valences, band fixed)...")
+    # Routing-only sweep: the label band is held at LABEL_BAND. Varying the band
+    # would confound routing with the label function -- a narrower band raises
+    # clear-set accuracy trivially (fewer neutral predictions on a set with no
+    # neutrals), which is not a routing effect.
     sweep = []
     for cheap_name, cheap_v in (("fpb", cheap_fpb_v), ("news", cheap_news_v)):
         for heavy_name, hv in heavy_v_dev.items():
             for ct in (0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0):
-                for band in (0.05, 0.1, 0.15):
-                    code, tiers_s = cascade_predict(
-                        cheap_v[clear_mask], hv[clear_mask], vader_v_dev[clear_mask],
-                        n_words[clear_mask],
-                        threshold=ct, band=band,
-                    )
-                    acc = float((code == y_code).mean())
-                    heavy_share = float(np.mean([t == "heavy" for t in tiers_s]))
-                    sweep.append({
-                        "cascade": f"cascade_{cheap_name}_{heavy_name}",
-                        "cheap_threshold": ct, "band": band,
-                        "accuracy": round(acc, 4), "heavy_share": round(heavy_share, 4),
-                    })
+                code, tiers_s = cascade_predict(
+                    cheap_v[clear_mask], hv[clear_mask], vader_v_dev[clear_mask],
+                    n_words[clear_mask],
+                    threshold=ct, band=LABEL_BAND,
+                )
+                acc = float((code == y_code).mean())
+                heavy_share = float(np.mean([t == "heavy" for t in tiers_s]))
+                sweep.append({
+                    "cascade": f"cascade_{cheap_name}_{heavy_name}",
+                    "cheap_threshold": ct, "band": LABEL_BAND,
+                    "accuracy": round(acc, 4), "heavy_share": round(heavy_share, 4),
+                })
     sweep.sort(key=lambda e: e["accuracy"], reverse=True)
 
     print("Scoring borderline (neutral) set with deployed components...")
