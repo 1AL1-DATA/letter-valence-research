@@ -39,7 +39,7 @@ The headline result, in one sentence: **the random forest hits 0.7377 accuracy, 
 
 This is the part the literature doesn't emphasize, so let me spell it out.
 
-The "gematria" features — modular arithmetic on the alphabet position sum, including mod 9 (the digital root), primality, and even the standard Hebrew gematria tradition applied 1-to-1 to English letters — **do not predict sentiment**. The best of them (`period_mod5`, r = -0.027, p = 1.6e-3) is just at the edge of Bonferroni significance for n=13,914 words. Most are nowhere close: `alpha_sum_mod9` has p = 0.99. `digital_root` has p = 0.24.
+The "gematria" features — modular arithmetic on the alphabet position sum, including mod 9 (the digital root), primality, and even the standard Hebrew gematria tradition applied 1-to-1 to English letters — **do not predict sentiment**. None of them come close to significance for n=13,914 words: the best is `is_prime_sum` (r = -0.016, p ≈ 0.067). Most are nowhere close: `alpha_sum_mod9` has p = 0.99. `digital_root` has p = 0.24.
 
 At the article level, removing the entire F2 (modular) family from the model *improves* the CV accuracy by 0.005. The F11 (number-theoretic / gematria) family has the same effect. These features are not just weak — they're actively unhelpful, providing noise that the random forest has to learn to ignore.
 

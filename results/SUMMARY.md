@@ -83,18 +83,20 @@ Dropping F9 (spectral) is the only change that hurts. Everything else either doe
 
 ## Per-word correlations with valence (Warriner 2013)
 
-The 6 features that survive Bonferroni correction (α = 0.05/68 ≈ 7.4e-4) at the word level. These are tiny effects — the best explains 0.5% of variance — but they're not zero.
+The **8 features** that survive Bonferroni correction (α = 0.05/68 ≈ 7.4e-4) at the word level. These are tiny effects — the best explains ~0.24% of variance — but they're not zero.
 
 | Feature | r | p | Family |
 |---|---|---|---|
-| `phon_vowel_ratio` | +0.0343 | 5.2e-05 | F5 phonetic |
+| `vowel_ratio` | +0.0487 | 9.0e-09 | F6 shape |
+| `consonant_ratio` | −0.0487 | 9.0e-09 | F6 shape |
+| `plosive_count` | −0.0410 | 1.3e-06 | F6 shape |
+| `phon_vowel_ratio` | +0.0344 | 4.8e-05 | F5 phonetic |
+| `fricative_count` | −0.0314 | 2.1e-04 | F6 shape |
+| `alpha_sum` | −0.0308 | 2.7e-04 | F1 alphabet |
 | `dft_power_k1` | −0.0307 | 2.9e-04 | F9 spectral |
-| `autocorr_lag1` | −0.0275 | 1.2e-03 | F9 spectral |
-| `period_mod5` | −0.0268 | 1.6e-03 | F2 modular |
-| `gzip_size` | −0.0265 | 1.8e-03 | F10 compression |
-| `n_runs` | −0.0257 | 2.5e-03 | F12 symmetry |
+| `plosive_ratio` | −0.0289 | 6.4e-04 | F6 shape |
 
-(11 more features pass uncorrected p < 0.05. Full list in `research_report.md`.)
+(Full list in `research_report.md`.)
 
 ## Comparison with VADER and FinBERT
 

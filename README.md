@@ -2,7 +2,72 @@
 
 **Can the letters of an English word predict its sentiment? An empirical study of 68 letter-derived numerical features across 13,914 words and 1,967 financial sentences.**
 
-> **TL;DR.** A random forest on 68 features computed purely from the letters of each word — alphabet position, modular arithmetic, bigram statistics, vowel/consonant ratios, phonetic features from CMUdict, spectral (DFT) analysis, compression, gematria-style encodings — reaches **0.7377 ± 0.0058 accuracy (F1 = 0.835)** on the FinancialPhraseBank binary sentiment task (5-fold CV), with a **permutation p-value < 0.0001**. A held-out 20% test gives 0.751 accuracy. The strongest single family is **spectral (DFT) features** of the letter-position sequence, which alone reaches 0.7346. Gematria-style features (mod-9, mod-26, primality, digital root) are **not** predictive after Bonferroni correction. The learning curve plateaus around n=1,376. At ~50,000 classifications per second on a CPU, the approach is fast enough to serve as an inexpensive pre-filter before a heavier model (LLM or transformer-based sentiment classifier), reducing compute cost in large-scale document ingestion.
+## Can the letters of a word predict its sentiment?
+
+*Short answer: a little bit, yes — but not from any single word. The signal only
+shows up once you average across a whole sentence, and even then it is a weak,
+secondary one.*
+
+**What we found, in plain terms**
+
+- Take any word. Ignore what it means — look only at which letters it is made
+  of (how far into the alphabet they sit, how many vowels, the shape of the
+  letter pattern). On their own, these letter-shapes barely predict how positive
+  or negative a word feels; on a single word, this will not help you bet.
+- Average that signal across every word in a sentence and a pattern emerges:
+  sentences whose words share certain letter-shapes lean positive or negative
+  more than chance. It is faint, but consistent.
+- The single biggest driver is a word's **vowel-to-consonant balance** — not the
+  "assign each letter a number and add it up" numerology people sometimes expect.
+  That part genuinely does not work (see below).
+
+**Does this actually matter for anything?**
+
+A little, with a caveat. Scoring text this way is extremely fast — it counts
+letters rather than understanding language — so it looks like a cheap first
+pass: skim a pile of documents for the obvious cases, hand the rest to a slower,
+smarter model. **We tested exactly that, and the letter model lost the job.**
+When it was deployed as the cheap tier of a real sentiment engine it was
+strictly dominated: a cheap tier based on *whole words* (TF-IDF + VADER + keyword
+features through a logistic regression) worked better, and is what we would
+actually recommend for that use case. The letter-only signal is a real,
+interesting fact about language — it is just not the most useful tool for the
+job it was originally proposed for. Details in [The 2-tier cascade
+follow-up](#the-2-tier-cascade-follow-up-why-the-letter-tiers-were-replaced).
+
+**The numbers, if you want them**
+
+| Question | Answer |
+|---|---|
+| How good is it, in accuracy terms? | **73.8%** in 5-fold cross-validation on financial-news sentences (held-out 20%: 75.1%), where always predicting the majority label gets **69.3%** |
+| Meaningful, or noise? | Meaningful. Shuffling the labels 50 times never produced a score this good (permutation p < 0.0001 as reported; conservative bound p < 0.02) |
+| Better than existing tools? | No — tuned VADER reaches 75%, FinBERT ~87%. A cheap, weak, interpretable signal, not a replacement |
+| Effect size at the single-word level? | Small. The best letter feature explains ~0.24% of the variation in how positive/negative a word feels |
+| Which letter pattern mattered most? | Vowel-to-consonant ratio (`vowel_ratio` r = +0.049; mirror `consonant_ratio` r = −0.049) |
+| Did the numerology-style features work? | No. None of them survive correcting for testing 68 things at once |
+
+Full method comparison in [What's in the headline number](#whats-in-the-headline-number).
+
+**Honest limits**
+
+- Tested on financial news only — we do not know whether it transfers to tweets, fiction, or everyday conversation.
+- The effect only appears when averaging across many words; judging a single word this way is not reliable.
+- English only. The method leans on an English pronunciation dictionary and English letter-frequency statistics, so it likely would not transfer to other languages as-is.
+
+<details>
+<summary><strong>For the statistically inclined: exact methodology and numbers</strong></summary>
+
+- **Data**: 1,967 labelled FinancialPhraseBank sentences (604 negative / 1,363 positive); 13,915 English words with human valence ratings from Warriner et al. (2013), 13,914 after removing rows with missing values, non-alphabetic entries, or single-character words.
+- **Model**: random forest on 68 hand-built letter-derived features across 12 families, 5-fold stratified cross-validation. The DFT (spectral) family alone reaches 0.7346; dropping the modular family alone leaves accuracy at 0.7422 (within CV noise).
+- **Headline result**: 0.7377 ± 0.0058 accuracy (F1 = 0.835); held-out 20% test: 0.751.
+- **Significance**: permutation test, 50 label shuffles — the observed 0.7377 beat all 50 (stored `p_value` = 0.0 in `results/permutation_test.json`; strict 0-of-50 bound p < 1/51 ≈ 0.02). The reported "p < 0.0001" is a parametric extrapolation from the null distribution: the observed result sits ~13.8 SD above the null mean (0.679 ± 0.004, null 99th percentile 0.690).
+- **Word-level correlations**: 8 of 68 features survive Bonferroni correction (α = 0.05/68 ≈ 7.4×10⁻⁴). Strongest: `vowel_ratio` (r = +0.049, p ≈ 9×10⁻⁹).
+- **Gematria / modular-arithmetic features**: none survive Bonferroni; the closest is `is_prime_sum` (p ≈ 0.067).
+- **Learning curve** plateaus around n = 1,376 training articles — the bottleneck is features, not data.
+- **Speed**: ~50,000 classifications/second on a CPU (single-threaded).
+
+Full reproduction steps: see [METHODOLOGY.md](METHODOLOGY.md).
+</details>
 
 > **Cascade follow-up (2026-08-07).** When the letter model was deployed as the cheap tier of a real sentiment engine, it turned out to be **strictly dominated**: the DFT probe's max `|v|` (0.922) never clears its 0.95 threshold, and the letter RF fires on only 3.6% of sentences. A **word-level cheap tier** — TF-IDF (1–2 grams) + VADER + keyword features through a 3-class logistic regression — replaces both. In a 2-tier cascade (cheap word tier → FinancialBERT), the cheap tier decides **36.6%** of clear-polarity calls at **97.2% accuracy** and the cascade scores **0.9512** vs **0.9558** for heavy-only (McNemar p = 0.15, not significant) while cutting transformer load by a third. One-third of calls never touch the transformer. Full evaluation in `results/cascade_benchmark.json` + `src/benchmark_cascade.py`.
 

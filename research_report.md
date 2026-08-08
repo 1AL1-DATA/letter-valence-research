@@ -124,13 +124,12 @@ The top features by Pearson r with valence (n=13,914 lemmas, Bonferroni α ≈ 7
 | `last_letter_lp` | +0.0255 | 2.6e-03 | F12 symmetry |
 | `dft_total_power` | -0.0252 | 2.9e-03 | F9 spectral |
 | `run_length_entropy` | -0.0245 | 3.8e-03 | F12 symmetry |
-| `period_mod5` | -0.0268 | 1.6e-03 | F2 modular |
 | `gzip_size_per_char` | +0.0228 | 7.3e-03 | F10 compression |
 | `gzip_ratio_vs_random` | +0.0228 | 7.3e-03 | F10 compression |
 
 **8 of 68 features survive Bonferroni correction.** The strongest is `vowel_ratio` (r = +0.049, p ≈ 1e-8). This is a *small* effect — the best single feature explains about 0.24% of variance — but it is not zero.
 
-**The gematria features (modular arithmetic, primality, digital root, gematria-style numbering) are all non-significant after Bonferroni.** The `period_mod5` (r = -0.027, p = 1.6e-3) is the only one close; the standard `alpha_sum_mod9` and `digital_root` have p > 0.2.
+**The gematria features (modular arithmetic, primality, digital root, gematria-style numbering) are all non-significant after Bonferroni.** None of them come close: the closest is `is_prime_sum` (r = -0.016, p ≈ 0.067); the standard `alpha_sum_mod9` and `digital_root` have p ≈ 0.99 and p ≈ 0.24.
 
 Full table: `results/word_level_correlations.csv`.
 
