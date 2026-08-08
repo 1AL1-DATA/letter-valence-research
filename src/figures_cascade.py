@@ -45,6 +45,13 @@ METHOD_COLORS = {
     "cascade": PALETTE["orange"],
     "heavy": PALETTE["prussian"],
 }
+SHORT_LABELS = {
+    "keyword": "keyword",
+    "vader": "VADER",
+    "cheap": "cheap",
+    "cascade": "cascade",
+    "heavy": "FinBERT",
+}
 BAND = 0.1  # neutral band on the quadratic score (matches engine default)
 CHEAP_THRESHOLD = 0.6  # cascade routing threshold (matches engine default)
 CODE_LABEL = {0: "negative", 1: "neutral", 2: "positive"}
@@ -136,7 +143,7 @@ def main() -> None:
     ax.bar(x, neut_miss, bottom=np.array(correct) + np.array(wrong_pol),
            color=PALETTE["alabaster"], label="predicted neutral")
     ax.set_xticks(x)
-    ax.set_xticklabels([METHOD_LABELS[m] for m in METHODS], rotation=20, ha="right")
+    ax.set_xticklabels([SHORT_LABELS[m] for m in METHODS], rotation=32, ha="right", fontsize=7.5)
     ax.set_ylim(0, 1.05)
     ax.set_ylabel("Fraction of clear set")
     ax.set_title("B. Misclassification (clear polarity)", fontweight="bold")
@@ -158,7 +165,7 @@ def main() -> None:
     band_label = f"neutral band (|score| = {BAND:.2f})"
     ax.text(4.45, BAND + 0.02, band_label, fontsize=8, color=PALETTE_WARM["accent"])
     ax.set_xticks(positions)
-    ax.set_xticklabels([METHOD_LABELS[m] for m in METHODS], rotation=20, ha="right")
+    ax.set_xticklabels([SHORT_LABELS[m] for m in METHODS], rotation=32, ha="right", fontsize=7.5)
     ax.set_ylabel("|score| on neutral news (quadratic)")
     ax.set_ylim(0, 1.05)
     ax.set_title("C. Borderline uncertainty (neutral set)", fontweight="bold")

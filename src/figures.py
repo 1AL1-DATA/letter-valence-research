@@ -39,6 +39,32 @@ COLORS = {
 }
 
 
+def _pad_xlim_for_texts(ax, texts, edge_pad_px: float = 6.0) -> None:
+    """Expand the x-limits so out-of-axis value labels are never clipped.
+
+    Text artists placed past the data extrema (e.g. bar value labels anchored
+    at a bar tip) are not accounted for by matplotlib's autoscale, so they can
+    bleed past the axes edge and collide with tick labels. Draw once, measure
+    the overshoot in pixels, and grow the x-limits accordingly.
+    """
+    fig = ax.figure
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    axbox = ax.get_window_extent(renderer=renderer)
+    lo, hi = ax.get_xlim()
+    need_lo = need_hi = 0.0
+    for t in texts:
+        e = t.get_window_extent(renderer=renderer)
+        if e.x0 < axbox.x0 + edge_pad_px:
+            need_lo = max(need_lo, axbox.x0 - e.x0 + edge_pad_px)
+        if e.x1 > axbox.x1 - edge_pad_px:
+            need_hi = max(need_hi, e.x1 - axbox.x1 + edge_pad_px)
+    ddx_lo = (hi - lo) * need_lo / axbox.width
+    ddx_hi = (hi - lo) * need_hi / axbox.width
+    if ddx_lo > 0 or ddx_hi > 0:
+        ax.set_xlim(lo - ddx_lo, hi + ddx_hi)
+
+
 # ---- 1. Headline summary figure ----
 def plot_headline_summary(out_path: Path) -> None:
     """One-glance figure: CV accuracy vs class-prior baseline + null distribution.
@@ -163,8 +189,8 @@ def plot_word_level_correlations(out_path: Path) -> None:
                  f"Green = significant at Bonferroni α = 0.05/68 ≈ 7.4e-4")
     for i, (bar, row) in enumerate(zip(bars, df.itertuples())):
         ax.text(row.r + (0.001 if row.r > 0 else -0.001), i,
-                f" {row.r:+.3f}", va="center",
-                ha="left" if row.r > 0 else "right", fontsize=9)
+                f" {row.r:+.3f}", va="center", ha="left", fontsize=9)
+    _pad_xlim_for_texts(ax, [t for t in ax.texts])
     fig.savefig(out_path, dpi=300)
     plt.close(fig)
     print(f"  Wrote {out_path.name}")
@@ -188,11 +214,10 @@ def plot_family_ablation(out_path: Path) -> None:
     ax.set_title("Leave-one-family-out ablation\n"
                  "Red = removing hurts; Green = removing helps (overfitting)")
     for bar, delta, acc in zip(bars, df["delta"], df["accuracy_mean"]):
-        ax.text(delta + (0.001 if delta >= 0 else -0.001),
-                bar.get_y() + bar.get_height()/2,
+        ax.text(delta + 0.001, bar.get_y() + bar.get_height()/2,
                 f" {delta:+.4f}  (acc={acc:.3f})",
-                va="center",
-                ha="left" if delta >= 0 else "right", fontsize=8.5)
+                va="center", ha="left", fontsize=8.5)
+    _pad_xlim_for_texts(ax, [t for t in ax.texts])
     fig.savefig(out_path, dpi=300)
     plt.close(fig)
     print(f"  Wrote {out_path.name}")
@@ -214,8 +239,8 @@ def plot_single_family(out_path: Path) -> None:
     ax.set_title("Single-family performance: how well does each feature family alone classify sentiment?\n"
                  "Highlighted: spectral (DFT) family — the strongest single signal")
     for bar, acc, n in zip(bars, df["accuracy_mean"], df["n_features"]):
-        ax.text(acc + 0.001, bar.get_y() + bar.get_height()/2,
-                f" {acc:.3f}  (n={n})", va="center", fontsize=9)
+        ax.text(acc / 2, bar.get_y() + bar.get_height()/2,
+                f"{acc:.3f}\n(n={n})", va="center", ha="center", fontsize=8.5)
     ax.legend(loc="lower right")
     fig.savefig(out_path, dpi=300)
     plt.close(fig)
@@ -353,10 +378,11 @@ def plot_feature_heatmap(out_path: Path) -> None:
                  "Red = feature is higher in low-valence words; Blue = higher in high-valence words")
     cbar = fig.colorbar(im, ax=ax, fraction=0.04, pad=0.04)
     cbar.set_label("Z-score (per feature)", fontsize=9)
-    # Annotate with the raw r value
-    for i, f in enumerate(top_features):
-        r = corr_df[corr_df["feature"] == f]["r"].iloc[0]
-        ax.text(-0.5, i, f"r={r:+.3f}", ha="right", va="center", fontsize=7.5, color="black")
+    # Annotate with the raw r value, folded into the row labels so it can never
+    # collide with the tick text (a separate left-side artist did).
+    r_by_feat = {row.feature: row.r for row in corr_df.itertuples()}
+    ax.set_yticklabels([f"{f}  (r={r_by_feat[f]:+.3f})" for f in top_features],
+                       fontsize=9)
     fig.savefig(out_path, dpi=300)
     plt.close(fig)
     print(f"  Wrote {out_path.name}")

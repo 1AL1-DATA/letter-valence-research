@@ -292,15 +292,16 @@ def make_shap_bar(shap_values, feature_names, n_top=30):
 # ══════════════════════════════════════════════════════════════════════════════
 
 def make_shap_waterfall(shap_vals, X_sample, feature_names, explainer,
-                        pos_idx=0, neg_idx=None):
+                        pos_idx=0, neg_idx=None, max_display=12):
     """
     Waterfall plots for one positive and one negative prediction.
     Shows how each feature pushes the prediction toward or away from positive.
     Pass the same TreeExplainer used in main() so we get the correct expected_value.
-    """
-    import shap
-    from shap import Explanation
 
+    Drawn manually with matplotlib instead of ``shap.plots.waterfall``: SHAP's
+    internal layout places "value = feature" text over its own y-tick labels on
+    narrow axes, which cannot be repositioned from outside.
+    """
     short = {fn: fn[:28] for fn in feature_names}
     n_feats = len(feature_names)
 
@@ -314,17 +315,51 @@ def make_shap_waterfall(shap_vals, X_sample, feature_names, explainer,
     else:
         ev = float(ev)
 
-    fig, axes = plt.subplots(1, 2, figsize=(16, 5))
+    fig, axes = plt.subplots(1, 2, figsize=(22, 6))
 
     def _plot(idx, ax, label):
-        sv = shap_vals[idx, :n_feats].copy()
+        sv = shap_vals[idx, :n_feats].astype(float)
         dr = X_sample[idx, :n_feats]
-        exp = Explanation(values=sv, base_values=ev, data=dr,
-                          feature_names=[short[f] for f in feature_names])
-        plt.sca(ax)
-        shap.plots.waterfall(exp, show=False, max_display=15)
-        ax.set_title(f"Predicted: {label.upper()}", fontsize=10)
-        ax.tick_params(labelsize=7)
+        order = np.argsort(-np.abs(sv))
+        display = list(order[:max_display])
+        other_sv = 0.0
+        if len(order) > max_display:
+            other_sv = float(sv[order[max_display:]].sum())
+            display.append(-1)
+        rows = np.arange(len(display))
+        pos = float(ev)
+        y = len(display) - 1 - rows  # top-down order
+        for i, fi in enumerate(display):
+            if fi == -1:
+                val = other_sv
+                name = f"{len(order) - max_display} other features"
+            else:
+                val = float(sv[fi])
+                fn = short[feature_names[fi]]
+                dv = float(dr[fi]) if not np.isnan(dr[fi]) else np.nan
+                name = f"{fn} = {dv:g}" if not np.isnan(dv) else fn
+            color = "#B04040" if val >= 0 else "#4A6FA5"
+            ypos = y[i]
+            ax.annotate(
+                "", xy=(pos + val, ypos), xytext=(pos, ypos),
+                arrowprops=dict(arrowstyle="-|>", lw=1.8, color=color),
+                annotation_clip=False,
+            )
+            ax.text(pos + val / 2, ypos + 0.28, name, ha="center", va="bottom",
+                    fontsize=8, color="#222222")
+            pos += val
+        ax.axvline(ev, color="#666666", ls="--", lw=0.9)
+        xmin = min(ev, pos) - 0.5
+        xmax = max(ev, pos) + 0.5
+        ax.text(xmin + 0.02, -0.55, f"base {ev:.2f}", ha="left", va="top",
+                fontsize=7.5, color="#666666")
+        ax.text(xmax - 0.02, -0.55, f"f(x) = {pos:.2f}", ha="right", va="top",
+                fontsize=9, fontweight="bold")
+        ax.set_xlim(xmin, xmax)
+        ax.set_ylim(-0.8, len(display) + 0.4)
+        ax.set_yticks([])
+        ax.set_xticks([])
+        ax.set_title(f"Predicted: {label.upper()}", fontsize=11, fontweight="bold")
 
     _plot(pos_idx, axes[0], "positive")
     _plot(neg_idx, axes[1], "negative")

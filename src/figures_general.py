@@ -101,9 +101,22 @@ def main() -> None:
                 va="center", ha="left", fontsize=8)
     ax.axvline(0.5, color=PALETTE["black"], ls=":", lw=0.8, alpha=0.5)
     ax.text(0.505, len(METHODS) - 0.4, "chance", fontsize=7, color=PALETTE["black"], alpha=0.6)
+    ax.axvline(0.616, color=PALETTE["black"], ls="--", lw=0.9, alpha=0.7)
+    ax.text(0.622, len(METHODS) - 0.4, "majority class\n(401 neg / 250 pos)", fontsize=6.5,
+            color=PALETTE["black"], alpha=0.7, va="top", ha="left")
 
     # ---- Panel B: misclassification breakdown (clear set) ----
     ax = axes[0, 1]
+    short = {
+        "keyword": "keyword",
+        "vader": "VADER",
+        "cheap_fpb": "cheap-FPB",
+        "cheap_news": "cheap-news",
+        "cascade_fpb_gen": "cas-FPB",
+        "cascade_news_gen": "cas-news",
+        "heavy_fin": "FinBERT",
+        "heavy_gen": "gen-BERT",
+    }
     x = np.arange(len(METHODS))
     correct, wrong_pol, neut_miss = [], [], []
     for m in METHODS:
@@ -125,11 +138,12 @@ def main() -> None:
     ax.bar(x, neut_miss, bottom=np.array(correct) + np.array(wrong_pol),
            color=PALETTE["alabaster"], label="predicted neutral")
     ax.set_xticks(x)
-    ax.set_xticklabels([METHOD_LABELS[m] for m in METHODS], rotation=20, ha="right")
-    ax.set_ylim(0, 1.05)
+    ax.set_xticklabels([short[m] for m in METHODS], rotation=32, ha="right", fontsize=7.5)
+    ax.set_ylim(0, 1.08)
     ax.set_ylabel("Fraction of clear set")
     ax.set_title("B. Misclassification (clear polarity)", fontweight="bold")
-    ax.legend(loc="upper center", ncol=3, frameon=True)
+    ax.legend(loc="upper center", ncol=3, frameon=True, fontsize=8,
+              bbox_to_anchor=(0.5, 1.02))
 
     # ---- Panel C: cascade tier routing (news-cheap x general heavy) ----
     ax = axes[1, 0]
