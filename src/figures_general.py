@@ -167,7 +167,7 @@ def main() -> None:
                     color=color, label=key.replace("cascade_", "").replace("_", " "))
     ax.set_xlabel("Heavy-tier share")
     ax.set_ylabel("Cascade accuracy")
-    ax.set_title("D. Threshold sweep (routing trade-off)", fontweight="bold")
+    ax.set_title("D. Threshold sweep (in-sample trade-off)", fontweight="bold")
     ax.legend(loc="lower left", frameon=True)
     ax.axhline(0.5, color=PALETTE["black"], ls=":", lw=0.8, alpha=0.5)
 

@@ -288,29 +288,45 @@ tiers:
 - Same routing (`|v| >= 0.6` → cheap, else heavy, VADER fallback), same metrics
   (accuracy + Wilson CI, macro-F1, exact McNemar, tier routing, threshold sweep).
 
-Results (clear-polarity set, n = 651):
+Results (clear-polarity set, n = 651; Wilson 95% CIs in brackets):
 
-| Method | Accuracy | Macro-F1 |
+| Method | Accuracy (95% CI) | Macro-F1 |
 |---|---|---|
-| Keyword lexicon | 0.0661 | 0.1199 |
-| FinancialBERT (heavy_fin) | 0.3041 | 0.4581 |
-| Cheap tier trained on FPB only | 0.4209 | 0.5523 |
-| VADER | 0.4685 | 0.5744 |
-| Cheap tier trained on news | 0.4931 | 0.6069 |
-| General BERT (heavy_gen) | 0.5760 | 0.6641 |
-| **Cascade (FPB cheap → gen heavy)** | **0.5975** | 0.6741 |
-| **Cascade (news cheap → gen heavy)** | **0.6190** | 0.6940 |
+| Keyword lexicon | 0.0661 [0.049, 0.088] | 0.1199 |
+| FinancialBERT (heavy_fin) | 0.3041 [0.270, 0.341] | 0.4581 |
+| Cheap tier trained on FPB only | 0.4209 [0.384, 0.459] | 0.5523 |
+| VADER | 0.4685 [0.431, 0.507] | 0.5744 |
+| Cheap tier trained on news | 0.4931 [0.455, 0.531] | 0.6069 |
+| General BERT (heavy_gen) | 0.5760 [0.538, 0.613] | 0.6641 |
+| Cascade (FPB cheap → gen heavy) | 0.5975 [0.559, 0.635] | 0.6741 |
+| **Cascade (news cheap → gen heavy)** | **0.6190 [0.581, 0.656]** | **0.6940** |
 
-Interpretation:
+Interpretation (significance = exact two-sided McNemar on the paired sentences):
 
 1. **The cheap word tier transfers out of finance.** Trained on nothing but FPB, it
-   still beats the finance-tuned FinancialBERT on general news (0.4209 vs 0.3041).
-   Retrained on news it is the strongest non-transformer component (0.4931).
+   still beats the finance-tuned FinancialBERT on general news (0.4209 vs 0.3041,
+   p ≈ 4×10⁻⁷) and closes most of the gap to VADER (still significantly below,
+   p ≈ 5×10⁻⁴). Retrained on news it is the strongest non-transformer component
+   (0.4931), not significantly different from VADER (p = 0.20).
 2. **The finance-tuned heavy is the domain-locked part.** FinancialBERT collapses on
    general news — it predicts neutral on 65.3% of clear-polarity sentences and lands
-   *below chance* (0.3041). With a domain-appropriate heavy, the cascade again beats
-   heavy-only (0.6190 vs 0.5760, McNemar p < 0.01) while the cheap tier absorbs ~24%
-   of calls at 91.8% accuracy (threshold sweep reaches 0.70 accuracy).
+   *below chance* (0.3041). With a domain-appropriate heavy, **only the news-cheap
+   cascade** beats heavy-only (0.6190 vs 0.5760, McNemar p ≈ 8×10⁻⁷); the FPB-cheap
+   cascade (0.5975) is numerically higher but not significant (p = 0.02, above the
+   0.01 multiple-comparison threshold). The cheap tier absorbs 24.3% of calls (n =
+   158, CI [21.1, 27.7]) at 91.8% accuracy. The threshold-sweep best (0.699) is an
+   **in-sample** grid maximum, an upper bound, not a held-out estimate.
+
+On the **borderline set** (n = 416 neutral sentences) the cascade is *not* a
+false-polarity reducer out of domain: versus its own cheap tier the rate is flat
+(26.4 vs 26.7%, p = 1.0; 27.4 vs 30.5%, p = 0.25) and versus heavy-only it is
+slightly but significantly *above* (26.4%/27.4% vs 23.3%, p ≈ 2×10⁻⁴ / <10⁻⁴).
+All rates carry ±~4–5-point Wilson CIs, so only the coarse ordering and these
+paired differences are supported. Keyword's 5.3% is trivially conservative
+(predicts neutral on 90.5% of the clear set). This is the opposite of the finance
+borderline set (n = 2,879), where the cascade cuts cheap-tier false polarity
+19.6% → 7.7% (p ≈ 3×10⁻⁶¹) while remaining above heavy-only's 4.9% (p ≈
+4×10⁻²⁵).
 
 The generalisation result is that the **cascade approach** — cheap word tier + routing
 → heavy fallback — is a general feature; the heavy transformer must match the domain.
@@ -320,6 +336,15 @@ The generalisation result is that the **cascade approach** — cheap word tier +
 1. **Single dataset, single task, single language.** The letter formula itself is validated on FPB binary only; the cascade follow-up adds a cross-domain held-out test on general news (NewsMTSC), and the cheap word tier transfers reasonably, but the formula's behaviour on other sentiment tasks and other languages is still unknown.
 
 2. **5-fold CV is not a held-out test.** The reported letter accuracy is an estimate of how the formula would perform on a new sample from the same distribution, not a guarantee of how it would perform on a different distribution. The cascade generalisation run partially addresses this — it retrains the cheap tier on FPB and evaluates on a different labeled corpus (NewsMTSC) — and the cross-domain result is reported honestly (0.42 transfer, 0.30 for the finance-tuned heavy).
+
+3. **Cross-domain conclusions rest on a single held-out split.** The NewsMTSC
+   evaluation uses one fixed split (n = 651 clear / 416 borderline) with no repeated
+   resampling and no independent replication. Point differences smaller than the
+   ~±4–5-point Wilson CIs are not separable, and the threshold-sweep maximum is
+   in-sample. The supported cross-domain claims are limited to the paired
+   differences with exact McNemar p ≤ 10⁻³ (news-cheap cascade vs heavy-only;
+   cheap tiers vs FinancialBERT; cascade-vs-cheap on the clear set) and the
+   absence of a borderline false-polarity reduction.
 
 3. **Feature engineering informed by literature.** The 68 features were selected based on prior work (Adelman 2018, Aryani 2018, de Zubicaray 2024). This is informed feature engineering, not automated feature learning. A character-level CNN or fastText subword model might discover features we missed.
 
