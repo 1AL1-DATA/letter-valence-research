@@ -164,7 +164,7 @@ trivially conservative.
   n≈1,376), vs 0.79–0.84 for word-level TF-IDF on the same data.
 
 **Conclusion:** a 2-tier word/transformer cascade matches heavy-only accuracy
-(0.9512 vs 0.9558, McNemar p = 0.15, not significant) while the cheap tier absorbs a
+(0.9512 vs 0.9558, McNemar p = 0.15, 20 vs 11 discordant pairs, not significant) while the cheap tier absorbs a
 third of the transformer's workload at ~1% of the compute. Full numbers:
 `cascade_benchmark.json`, `cascade_predictions.csv`, `figures/cascade_sentiment_eval.png`.
 
@@ -229,7 +229,7 @@ it is *not* a false-polarity reducer here — vs its own cheap tier 26.4 vs 26.7
 (p = 1.0) and 27.4 vs 30.5% (p = 0.25); vs heavy-only it is slightly but
 significantly *above* (p ≈ 2×10⁻⁴ / <10⁻⁴). Power is the key caveat: for the
 cascade-vs-cheap comparisons a paired test at α = 0.01 / 80% power resolves only
-~7-point differences, so the 0–3-point gaps mean "indistinguishable in this
+~7-point differences, so the 0.3–3.1-point gaps mean "indistinguishable in this
 sample", not "equal"; the significant *worse*-than-heavy 3.1/4.1-point gaps rest
 on 13/0 and 17/0 discordant pairs, significant because perfectly one-directional.
 Keyword's 5.3% is trivially
@@ -252,11 +252,13 @@ polarity-error reduction.
    general news — it predicts neutral on 65.3% of clear-polarity sentences and lands
    *below chance* (0.3041, CI [0.270, 0.341]). With a domain-appropriate heavy, the
    **news-cheap cascade** beats heavy-only (0.6190 vs 0.5760, **+4.3 points,
-   paired-Wilson CI [2.8, 4.9], bootstrap CI [2.5, 6.3]**, McNemar p ≈ 8×10⁻⁷)
+   paired-Wilson CI [2.8, 4.9], bootstrap CI [2.5, 6.3]**, McNemar p ≈ 8×10⁻⁷,
+   the edge resting on 31 of 34 discordant pairs)
    while the cheap tier absorbs 24.3% of calls (n = 158) at 91.8% accuracy; the
-    FPB-cheap cascade is not a significant improvement (p = 0.02), and the two
+    FPB-cheap cascade is not a significant improvement (p = 0.02, 24 of 34
+    discordant pairs), and the two
      cascade variants do not differ reliably at the corrected α = 0.01 level
-     (p = 0.049; 95% bootstrap CI on the difference [+0.2, +4.2] points is marginal). A routing-only threshold sweep
+     (p = 0.049, 29 of 44 discordant pairs; 95% bootstrap CI on the difference [+0.2, +4.2] points is marginal). A routing-only threshold sweep
     (band held fixed at 0.1) reaches 0.654 accuracy at a 53% heavy share (0.647 for
     the FPB-cheap variant); the best point is an **in-sample** grid maximum, an
     upper bound rather than a held-out estimate, and the label band is not swept

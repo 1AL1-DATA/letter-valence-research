@@ -283,7 +283,8 @@ decided only 3.6\% of sentences. The production cascade is now \textbf{two tiers
 On the FinancialPhraseBank clear-polarity set (n = 1,967, 5-fold CV, heavy =
 \texttt{ahmedrachid/FinancialBERT-Sentiment-Analysis}) the cascade reaches
 \textbf{0.9512} accuracy (macro-F1 0.9643) versus \textbf{0.9558} heavy-only
-(macro-F1 0.9716): an exact McNemar test gives $p = 0.15$ (not significant), so
+(macro-F1 0.9716): an exact McNemar test gives $p = 0.15$ (not significant; 20
+vs.\ 11 discordant pairs), so
 the cascade matches the transformer on accuracy while the cheap tier decides
 \textbf{36.6\% of calls at 97.2\%} accuracy --- roughly a third of the
 transformer's load absorbed at ~1\% of its compute. Full per-method metrics
@@ -346,15 +347,19 @@ Two findings follow:
    clear-polarity sentences (its \texttt{neutral\_predicted} fraction) and lands
    below chance (0.3041; Wilson 95\% CI [0.270, 0.341]). With a
    domain-appropriate heavy, only the \emph{news}-cheap cascade is a supported
-   win: it beats heavy-only \textbf{0.6190 vs.\ 0.5760} (+4.3 points; exact
-   McNemar $p \approx 8\times10^{-7}$ at the 0.01 level; paired-Wilson CI on the
-   difference [2.8, 4.9] points), and both cascades beat their own cheap tiers
-   ($p = 3\times10^{-9}$ and $p = 10^{-13}$). The \emph{FPB}-cheap cascade is
-   numerically higher than heavy-only (0.5975) but this is \emph{not} significant
-   (exact McNemar $p = 0.02$, above the multiple-comparison threshold), so it
+    win: it beats heavy-only \textbf{0.6190 vs.\ 0.5760} (+4.3 points; exact
+    McNemar $p \approx 8\times10^{-7}$ at the 0.01 level; paired-Wilson CI on the
+    difference [2.8, 4.9] points). The entire edge rests on 34 discordant pairs,
+    of which 31 favour the cascade (3 the reverse), all on instances the cheap
+    tier routed. Both cascades beat their own cheap tiers
+    ($p = 3\times10^{-9}$ and $p = 10^{-13}$). The \emph{FPB}-cheap cascade is
+    numerically higher than heavy-only (0.5975; +2.2 points on 24 of 34
+    discordant pairs) but this is \emph{not} significant
+    (exact McNemar $p = 0.02$, above the multiple-comparison threshold), so it
     should be read as a point estimate, not an improvement; the two cascade
     variants do not differ reliably at the corrected $\alpha = 0.01$ level
-   ($p = 0.049$; 95\% bootstrap CI on the difference [+0.2, +4.2] points is
+    ($p = 0.049$, 29 of 44 discordant pairs favouring the news-cheap variant;
+    95\% bootstrap CI on the difference [+0.2, +4.2] points is
     marginal). The cheap tier absorbs 24.3\% of clear calls
     (n = 158; Wilson 95\% CI [0.211, 0.277]) at 91.8\% accuracy (CI [0.864,
     0.951]). A routing-only threshold sweep (routing threshold
@@ -435,13 +440,15 @@ baseline pairwise comparisons at the conventional 0.05 level, not a
 sample-adaptive threshold. The supported claims
 are: (i) the \emph{news}-cheap cascade beats heavy-only on clear-polarity
 accuracy by +4.3 points (95\% paired-Wilson CI [2.8, 4.9] points; a 20{,}000-resample
-bootstrap CI on the difference is [2.5, 6.3]); (ii) the \emph{FPB}-cheap
-cascade does not ($p = 0.02$); (iii) the two cascade variants do not differ
-reliably --- 0.6190 vs.\ 0.5975, $p = 0.049$, above the corrected
+bootstrap CI on the difference is [2.5, 6.3]), the edge resting on 31 of 34
+discordant pairs favouring the cascade; (ii) the \emph{FPB}-cheap
+cascade does not ($p = 0.02$; 24 of 34 discordant pairs); (iii) the two cascade
+variants do not differ reliably --- 0.6190 vs.\ 0.5975, $p = 0.049$ (29 of 44
+discordant pairs favouring the news-cheap variant), above the corrected
 $\alpha = 0.01$ level, with a 95\% bootstrap CI on the difference of
 [+0.2, +4.2] points sitting at the boundary of zero; (iv) on the
 general-news borderline set the cascade is not a false-polarity reducer, and
-the 0--3-point gaps to its own cheap tier lie below the resolution of this
+the 0.3--3.1-point gaps to its own cheap tier lie below the resolution of this
 sample --- for the cascade-versus-cheap comparisons ($m \approx 110$ discordant
 pairs) a paired test at $\alpha = 0.01$ / 80\% power resolves only
 differences of $\sim$7 points --- whereas the 13/0 and 17/0 discordant

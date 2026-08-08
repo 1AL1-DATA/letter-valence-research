@@ -249,7 +249,7 @@ Routing is cheapest-and-most-decisive-first:
 
 On the clear-polarity set the cascade scores **0.9512** vs **0.9558** for the heavy
 tier alone — a difference that is **not statistically significant** (exact McNemar
-p = 0.15). The cheap tier decides **36.6%** of clear-polarity calls at **97.2%
+p = 0.15; 20 vs 11 discordant pairs). The cheap tier decides **36.6%** of clear-polarity calls at **97.2%
 accuracy**, and 96.7% of neutral-set calls still land in the heavy tier (i.e. the
 cheap tier almost never fires on genuinely neutral news). This matches heavy-only
 accuracy while cutting transformer load by about a third.
@@ -314,10 +314,13 @@ Interpretation (significance = exact two-sided McNemar on the paired sentences):
    general news — it predicts neutral on 65.3% of clear-polarity sentences and lands
    *below chance* (0.3041). With a domain-appropriate heavy, **only the news-cheap
    cascade** beats heavy-only (0.6190 vs 0.5760, +4.3 points, paired-Wilson CI
-   [2.8, 4.9] points, bootstrap CI [2.5, 6.3]; McNemar p ≈ 8×10⁻⁷); the FPB-cheap
+   [2.8, 4.9] points, bootstrap CI [2.5, 6.3]; McNemar p ≈ 8×10⁻⁷, the edge
+   resting on 31 of 34 discordant pairs); the FPB-cheap
    cascade (0.5975) is numerically higher but not significant (p = 0.02, above the
-   0.01 multiple-comparison threshold); and the two cascade variants do not differ
-   reliably at the corrected α = 0.01 level (p = 0.049; 95% bootstrap CI on
+   0.01 multiple-comparison threshold; 24 of 34 discordant pairs); and the two
+   cascade variants do not differ
+   reliably at the corrected α = 0.01 level (p = 0.049, 29 of 44 discordant pairs
+   favouring the news-cheap variant; 95% bootstrap CI on
    the difference [+0.2, +4.2] points is marginal). The cheap tier absorbs 24.3% of calls (n =
    158, CI [21.1, 27.7]) at 91.8% accuracy. A routing-only threshold sweep
    (band held fixed at 0.1) reaches 0.654 accuracy at a 53% heavy share (0.647
@@ -335,7 +338,7 @@ Power matters here: the resolvable difference is comparison-specific — a paire
 test at α = 0.01 / 80% power resolves ≈ 2.8·√m/n points for m discordant pairs,
 i.e. ~7 points for the cascade-vs-cheap comparisons (m ≈ 110) but only
 ~2.4–2.8 points for the cascade-vs-heavy comparisons (m = 13/17). So the
-0–3-point gaps to the cheap tier mean "indistinguishable in this sample", not
+0.3–3.1-point gaps to the cheap tier mean "indistinguishable in this sample", not
 "equal"; the significant *worse*-than-heavy gaps rest on 13/0 and 17/0
 discordant pairs, significant only because they are perfectly one-directional.
 Paired tests resolve a staircase, not a flat ordering: keyword is significantly

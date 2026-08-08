@@ -142,6 +142,15 @@ All notable changes to this project are documented here. The format follows
 - **Borderline table caption fixed**: CI overlap alone does not settle
   separability (heavy_gen and the cascades have overlapping CIs yet are
   separable by the paired tests).
+- **Discordant-pair counts now reported for every headline p-value** (a
+  McNemar p-value without its b/c counts is incomplete): the +4.3-point win
+  rests on 31 vs 3 discordant pairs (m = 34), the FPB-cheap +2.2 points on
+  24 vs 10, the cascade-vs-cascade difference on 29 vs 15 (m = 44), the FPB
+  clear cascade-vs-heavy on 20 vs 11 (p = 0.15), and the FPB borderline
+  cascade-vs-heavy on 0 vs 82. Added to `arxiv_paper.tex`, `README.md`,
+  `METHODOLOGY.md`, `results/SUMMARY.md`, `research_report.md`, and printed by
+  `src/robustness_analysis.py` (clear pairs now include b/c; FPB clear pairs
+  added).
 - **Keyword caveat added**: its low borderline false-polarity (5.3% / 6.6%) is
   trivially conservative — it predicts neutral on 90.5% (72.7%) of the clear set
   (accuracy 0.066 / 0.191).

@@ -230,7 +230,7 @@ and routes everything else to the heavy tier:
 | McNemar vs heavy-only | — | **p = 0.15 (ns)** |
 
 The 0.9512 vs 0.9558 difference is **not statistically significant** (exact McNemar
-p = 0.15), but the cheap tier absorbs a third of the transformer's workload — at 1%
+p = 0.15; 20 vs 11 discordant pairs), but the cheap tier absorbs a third of the transformer's workload — at 1%
 of the compute. On the neutral set (n = 2,879) the cascade cuts the cheap tier's
 false-polarity rate from 19.6% to 7.7% (**p ≈ 3×10⁻⁶¹**, exact McNemar) while paying
 a small but real cost versus heavy-only (7.7% vs 4.9%, **p ≈ 4×10⁻²⁵**): the
@@ -278,15 +278,18 @@ findings, with the significance that survives the numbers:
 2. **The finance-tuned heavy is the domain-locked part.** FinancialBERT collapses
    on general news — it predicts neutral on 65.3% of clear-polarity sentences and
    lands *below chance* (0.3041, CI [0.270, 0.341]). With a domain-appropriate
-    general heavy, **only the news-cheap cascade is a supported win**: 0.6190 vs
-    0.5760, **+4.3 points (paired-Wilson CI [2.8, 4.9], bootstrap [2.5, 6.3])**,
-    **McNemar p ≈ 8×10⁻⁷**.
-    The FPB-cheap cascade (0.5975) is numerically higher than heavy-only but **not
-    significant** (p = 0.02, above the 0.01 multiple-comparison threshold) — a
-    point estimate, not an improvement; the     two cascade variants do not differ
-    reliably from each other at the corrected α = 0.01 level (p = 0.049;
-    95% bootstrap CI on the difference [+0.2, +4.2] points is marginal). Both cascades do beat their own cheap tiers
-    (p ≈ 3×10⁻⁹ and 10⁻¹³). The cheap tier
+     general heavy, **only the news-cheap cascade is a supported win**: 0.6190 vs
+     0.5760, **+4.3 points (paired-Wilson CI [2.8, 4.9], bootstrap [2.5, 6.3])**,
+     **McNemar p ≈ 8×10⁻⁷** — the edge rests on 31 of 34 discordant pairs
+     favouring the cascade (all on cheap-routed instances).
+     The FPB-cheap cascade (0.5975) is numerically higher than heavy-only but **not
+     significant** (p = 0.02, above the 0.01 multiple-comparison threshold; 24 of
+     34 discordant pairs favour it) — a
+     point estimate, not an improvement; the two cascade variants do not differ
+     reliably from each other at the corrected α = 0.01 level (p = 0.049, 29 of
+     44 discordant pairs favouring the news-cheap variant;
+     95% bootstrap CI on the difference [+0.2, +4.2] points is marginal). Both cascades do beat their own cheap tiers
+     (p ≈ 3×10⁻⁹ and 10⁻¹³). The cheap tier
     absorbs 24.3% of clear calls (n = 158, CI [21.1, 27.7]) at 91.8% accuracy (CI
     [86.4, 95.1]). A routing-only threshold sweep (band held fixed at 0.1) reaches
     0.654 accuracy at a 53% heavy share (0.647 for the FPB-cheap variant) — the
@@ -302,7 +305,7 @@ significantly *above* heavy-only (p ≈ 2×10⁻⁴ / <10⁻⁴). The resolvable
 is comparison-specific: a paired test at α = 0.01 / 80% power resolves
 ≈ 2.8·√m/n points for m discordant pairs — ~7 points for the cascade-vs-cheap
 comparisons (m ≈ 110) but only ~2.4–2.8 points for the cascade-vs-heavy
-comparisons (m = 13/17). So the 0–3-point gaps to the cheap tier mean
+comparisons (m = 13/17). So the 0.3–3.1-point gaps to the cheap tier mean
 "indistinguishable here", not "equal", while the 3.1/4.1-point *worse*-than-heavy
 gaps are significant precisely because every discordant pair points the same way.
 Keyword's low 5.3% is bought by never committing — it predicts neutral on 90.5%

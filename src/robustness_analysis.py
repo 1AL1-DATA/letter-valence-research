@@ -167,7 +167,8 @@ def main() -> None:
         d = (cc - bb) / len(yc)
         wlo, whi = paired_diff_ci(bb, cc, len(yc))
         blo, bhi = bootstrap_diff_ci(yc, methods_c[a], methods_c[b])
-        print(f"  {a:20s} vs {b:20s} d={d:+.4f} Wilson[{wlo:+.4f},{whi:+.4f}] "
+        print(f"  {a:20s} vs {b:20s} b={bb:3d} c={cc:3d} d={d:+.4f} "
+              f"Wilson[{wlo:+.4f},{whi:+.4f}] "
               f"boot[{blo:+.4f},{bhi:+.4f}] p={p:.3g} res={resolvable(bb+cc, len(yc))*100:.1f}pts")
 
     print("\n== BORDERLINE false-polarity (Wilson 95% CI) ==")
@@ -212,6 +213,22 @@ def main() -> None:
     kw_clear_neu = float(np.mean(predict_from_v(_val(fc, "kw_v")) == 1))
     print(f"  keyword neutral-pred on FPB clear: {kw_clear_neu:.4f}")
     print(f"  keyword neutral-pred on FPB borderline: {np.mean(lfp['keyword'] == 1):.4f}")
+
+    print("\n== FPB clear (n = %d) ==" % len(fc))
+    yc2 = np.array([int(r["true"]) for r in fc])
+    lc2 = {
+        "cheap": _labels(fc, "cheap_v"),
+        "heavy": _labels(fc, "heavy_v"),
+        "keyword": _labels(fc, "kw_v"),
+        "cascade": np.array([int(r["cascade_label"]) for r in fc]),
+    }
+    for a, b in [("cascade", "cheap"), ("cascade", "heavy"), ("cascade", "keyword")]:
+        bb, cc = paired_counts(yc2, lc2[a], lc2[b])
+        p = mcnemar_p(bb, cc)
+        d = (cc - bb) / len(yc2)
+        wlo, whi = paired_diff_ci(bb, cc, len(yc2))
+        print(f"  {a:8s} vs {b:8s} b={bb:4d} c={cc:4d} d={d:+.4f} "
+              f"Wilson[{wlo:+.4f},{whi:+.4f}] p={p:.3g}")
 
     print("\n== heavy_fin out-of-domain conservatism (general news) ==")
     print(f"  neutral-pred on borderline: {np.mean(methods_n['heavy_fin'] == 1):.4f}")

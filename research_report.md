@@ -307,11 +307,12 @@ Two findings (significance = exact two-sided McNemar on the paired sentences):
    below chance (0.3041, CI [0.270, 0.341]). With a domain-appropriate heavy, only
    the **news-cheap cascade** is a supported win over heavy-only (0.6190 vs 0.5760,
    **+4.3 points, paired-Wilson CI [2.8, 4.9], bootstrap CI [2.5, 6.3]**,
-   McNemar p ≈ 8×10⁻⁷); the FPB-cheap
+   McNemar p ≈ 8×10⁻⁷, the edge resting on 31 of 34 discordant pairs); the FPB-cheap
    cascade (0.5975) is numerically higher but
-   not significant (p = 0.02, above the 0.01 multiple-comparison threshold), and the
+   not significant (p = 0.02, above the 0.01 multiple-comparison threshold; 24 of
+   34 discordant pairs), and the
    two cascade variants do not differ reliably at the corrected α = 0.01 level
-   (p = 0.049; 95% bootstrap CI on the difference [+0.2, +4.2] points is marginal). The
+   (p = 0.049, 29 of 44 discordant pairs; 95% bootstrap CI on the difference [+0.2, +4.2] points is marginal). The
    cheap tier absorbs 24.3% of calls (n = 158, CI [21.1, 27.7]) at 91.8% accuracy,
    and a routing-only threshold sweep (band held fixed at 0.1) reaches 0.654 at a
    53% heavy share (0.647 for the FPB-cheap variant) — an in-sample grid maximum,
