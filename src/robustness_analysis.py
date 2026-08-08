@@ -148,6 +148,44 @@ def main() -> None:
         lo, hi = wilson_ci(len(yc), kk)
         print(f"  {k:20s} {kk / len(yc):.4f} [{lo:.4f}, {hi:.4f}]")
 
+    from collections import Counter
+    cnt = Counter(yc.tolist())
+    maj = max(cnt.values()) / len(yc)
+    print(f"\n== CLEAR SET class balance ==")
+    print(f"  {dict(cnt)}  majority-class baseline = {maj:.4f} "
+          f"(heavy_gen {np.mean(methods_c['heavy_gen'] == yc):.4f} is "
+          f"{'above' if np.mean(methods_c['heavy_gen'] == yc) > maj else 'BELOW'} it)")
+
+    # Leak-adjusted headline: drop the two overlapped clear-polarity NewsMTSC
+    # devtest sentences that also appear in the news cheap tier's training split
+    # (dev rows 268 and 308).
+    clean = [r for r in clear if int(r["id"]) not in (268, 308)]
+    yl = np.array([int(r["true"]) for r in clean])
+    lc = _cascade_labels(clean, "cascade_news_gen_label")
+    lh = _labels(clean, "heavy_gen_v")
+    bb, cc = paired_counts(yl, lc, lh)
+    print(f"\n== leak-adjusted headline (drop dev rows 268, 308) ==")
+    print(f"  n = {len(yl)}: cascade_news {np.mean(lc == yl):.4f} vs heavy_gen "
+          f"{np.mean(lh == yl):.4f} (gap {100*(np.mean(lc == yl) - np.mean(lh == yl)):+.2f} pts); "
+          f"b/c = {bb}/{cc} p = {mcnemar_p(bb, cc):.3g}")
+
+    # Per-class composition of the headline discordant pairs.
+    d = [(i, int(r["true"])) for i, r in enumerate(clear)
+         if methods_c["cascade_news_gen"][i] != methods_c["heavy_gen"][i]]
+    cwin = [t for _, t in d if methods_c["cascade_news_gen"][_] == t]
+    hwin = [t for _, t in d if methods_c["heavy_gen"][_] == t]
+    print(f"\n== headline discordant pairs by true class ==")
+    print(f"  cascade wins {len(cwin)} ({dict(Counter(cwin))}), "
+          f"heavy wins {len(hwin)} ({dict(Counter(hwin))}); "
+          f"heavy_gen per-class acc "
+          f"{ {0: round(float(np.mean(methods_c['heavy_gen'][yc == 0] == 0)), 4),
+               2: round(float(np.mean(methods_c['heavy_gen'][yc == 2] == 2)), 4)} }")
+
+    # VADER fallback never fires in this eval.
+    print(f"\n== VADER fallback usage ==")
+    print(f"  cascade_news_gen tier == vader on full dev: "
+          f"{sum(1 for r in rows if r['cascade_news_gen_tier'] == 'vader')} / {len(rows)}")
+
     pairs = [
         ("cascade_news_gen", "heavy_gen"),
         ("cascade_fpb_gen", "heavy_gen"),
