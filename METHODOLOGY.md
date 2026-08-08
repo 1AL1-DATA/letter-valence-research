@@ -165,7 +165,7 @@ To verify that the observed accuracy is not a fluke of the particular choice of 
 2. Shuffle the labels 50 times; for each shuffled set, re-run the same 5-fold CV.
 3. Report the null distribution (mean, std, percentiles) and the p-value: P[null ≥ observed].
 
-This is the strongest test of statistical significance available without holding out a separate test set. The result was **p = 0.0000** (no shuffled-label run beat the real run; the real accuracy of 0.738 was 14 standard deviations above the null mean of 0.684).
+This is the strongest test of statistical significance available without holding out a separate test set. The result was **p = 0.0000** (no shuffled-label run beat the real run; the real accuracy of 0.738 was 13.8 standard deviations above the null mean of 0.679).
 
 ### Learning curve (bias-variance decomposition)
 

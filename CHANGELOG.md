@@ -69,6 +69,42 @@ All notable changes to this project are documented here. The format follows
   NewsMTSC citation added.
 - **`CITATION.cff`** bumped to v1.2.0 (2026-08-07) with the NewsMTSC reference.
 
+## [1.2.4] - 2026-08-08
+
+### Fixed (doc-vs-artifact discrepancies)
+- **Permutation test regenerated with the documented 50 shuffles.** The stored
+  `results/permutation_test.json` had been generated with `n_perm=5` (an override
+  of the code default of 50), while every doc claimed 50 shuffles. Rerun via the
+  same code path as `src/analyze.py` STEP 6 (`scripts/regenerate_permutation.py`)
+  with the documented default: null mean 0.679 ± 0.004 (null max 0.691), 0 of 50
+  shuffles beat the observed 0.7377, p < 0.0001. The "14 standard deviations"
+  figure (computed from the noisy 5-sample null_std) is corrected to **13.8 SD**
+  in `arxiv_paper.tex`, `research_report.md`, `results/SUMMARY.md`,
+  `METHODOLOGY.md`, `blog_post.md`. `summary.json`'s `permutation_test` block and
+  `stratified_random` baseline (now with F1) updated to match.
+- **README per-word headline corrected.** It claimed the strongest single
+  feature was `dft_power_k1` at r = +0.034 with "six features surviving
+  Bonferroni". The data (and the repo's own `research_report.md` /
+  `arxiv_paper.tex`) say: strongest is `vowel_ratio` (r = +0.049, mirror
+  `consonant_ratio` at r = −0.049), `dft_power_k1` is r = −0.031, and **eight**
+  features survive Bonferroni at α = 0.05/68. README bullet 2 rewritten.
+- **Stratified-random baseline corrected in all four tables.** The README,
+  `research_report.md`, `results/SUMMARY.md` and `arxiv_paper.tex` listed it as
+  0.500 (F1 0.50) — generic "chance" typing. The actual computed value
+  (`src/evaluate.py::baseline_stratified_random`, 100 trials) is
+  **0.574 ± 0.008 (F1 0.693)**, i.e. −0.119 vs the 0.693 class-prior (not
+  −0.193). Reflects the 69/31 class imbalance; a label-shuffled classifier on
+  this data lands near 0.57, not 0.50.
+- **F2 ablation finding disclosed in README.** Dropping the modular-arithmetic
+  family (F2) alone *raises* accuracy to 0.7422 (within CV noise of, and
+  numerically above, the 0.7377 full model) — the modular features are
+  uninformative rather than merely weak. Was already in `research_report.md` and
+  `results/family_ablation.csv`; now also in README bullet 3.
+- **README reproduction steps de-personalised.** Hardcoded
+  `/home/a/esg-dashboard/.venv/bin/python` paths replaced with plain
+  `python -m src.*`; cascade steps now note they additionally require
+  `torch` + `transformers` (not in `requirements.txt`).
+
 ## [1.2.3] - 2026-08-08
 
 ### Added (leak & baseline disclosures)
@@ -190,7 +226,7 @@ All notable changes to this project are documented here. The format follows
   exact paired McNemar p-values, Wilson CIs, paired-difference CIs,
   20,000-resample bootstrap CIs, and the per-comparison resolvable difference
   at α = 0.01 / 80% power. Run with
-  `/home/a/esg-dashboard/.venv/bin/python -m src.robustness_analysis`.
+  `python -m src.robustness_analysis`.
 - **`arxiv_paper.tex` / `arxiv_paper.pdf`** re-rendered: clear-set and
   borderline tables now carry Wilson 95% CI columns; §6 rewritten with the
   corrected borderline analysis and a "Robustness and limits" paragraph.

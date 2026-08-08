@@ -141,7 +141,7 @@ Full table: `results/word_level_correlations.csv`.
 | Method | Accuracy | F1 (binary) | vs class-prior (0.693) |
 |---|---|---|---|
 | Class-prior baseline (always positive) | 0.693 | 0.819 | 0 |
-| Stratified random baseline (n=100) | 0.500 | n/a | -0.193 |
+| Stratified random baseline (n=100) | 0.574 ± 0.008 | 0.693 | -0.119 |
 | Ridge classifier (linear) | 0.7209 ± 0.0048 | 0.810 | +0.028 |
 | Logistic regression | 0.7087 ± 0.0058 | 0.799 | +0.016 |
 | **Random Forest (68 features, 5-fold CV)** | **0.7377 ± 0.0058** | **0.835** | **+0.045** |
@@ -150,7 +150,7 @@ Full table: `results/word_level_correlations.csv`.
 | VADER (lexicon, threshold -0.05) | 0.750 | 0.840 | +0.057 |
 | FinBERT (BERT-base, finance-tuned, from literature) | ~0.87 | ~0.87 | +0.18 |
 
-**Permutation test** (50 shuffles): p < 0.0001. The real accuracy is 14 standard deviations above the null mean of 0.684 ± 0.004. The null distribution never exceeds 0.691.
+**Permutation test** (50 shuffles): p < 0.0001. The real accuracy is 13.8 standard deviations above the null mean of 0.679 ± 0.004. The null distribution never exceeds 0.691.
 
 ### 4.3 Bias-variance decomposition (learning curve)
 

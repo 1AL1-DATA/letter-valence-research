@@ -28,7 +28,7 @@ letter-valence-research/
 ├── data/
 │   ├── README.md              ← what each file is and where it came from
 │   ├── download.sh            ← idempotent download script
-│   ├── warriner2013.csv       ← 13,915 Warriner lemmas, valence ratings
+│   ├── warriner2013.csv       ← 13,915 Warriner lemmas, valence ratings (13,914 usable after cleaning)
 │   ├── articles_binary.csv     ← 1,967 FPB sentences, pos/neg labels
 │   ├── cmudict.dict           ← CMU Pronouncing Dictionary (135k words)
 │   ├── letter_freqs.json      ← derived: letter unigram + bigram counts
@@ -123,14 +123,15 @@ python -m src.classify --text "The company reported record earnings."
 python -m src.classify --text "The company reported record earnings." --compare
 
 # 7. Run the 2-tier cascade evaluation (cheap word tier → heavy)
-#    Requires the esg-dashboard workspace venv (FinancialBERT + sklearn).
-/home/a/esg-dashboard/.venv/bin/python -m src.benchmark_cascade
-/home/a/esg-dashboard/.venv/bin/python -m src.figures_cascade
+#    Requires torch + transformers (not in requirements.txt) and a Hugging Face
+#    download of FinancialBERT on first run.
+python -m src.benchmark_cascade
+python -m src.figures_cascade
 
 # 7b. Cross-domain generalisation: same cascade on general news (NewsMTSC)
-#     Downloads two transformers (FinanceBERT + a general-domain BERT) on first run.
-/home/a/esg-dashboard/.venv/bin/python -m src.benchmark_general
-/home/a/esg-dashboard/.venv/bin/python -m src.figures_general
+#     Downloads two transformers (FinancialBERT + a general-domain BERT) on first run.
+python -m src.benchmark_general
+python -m src.figures_general
 
 # 8. Run the tests
 python -m unittest discover tests/
@@ -147,14 +148,14 @@ after removing neutrals). A **held-out 20% test** gives 0.751 accuracy.
 
 Class-prior baseline (always predict positive) is 0.693. The permutation
 p-value is computed by shuffling labels 50 times — zero of 50 shuffled runs beat
-the real run. The null distribution sits at 0.684 ± 0.004.
+the real run. The null distribution sits at 0.679 ± 0.004.
 
 For comparison:
 
 | Method | Accuracy | F1 | Notes |
 |---|---|---|---|
 | Class-prior baseline | 0.693 | 0.819 | always predict positive |
-| Stratified random | 0.500 | 0.50 | n=100 trials, mean |
+| Stratified random | 0.574 ± 0.008 | 0.693 | n=100 trials, mean |
 | VADER (lexicon, threshold 0) | 0.678 | 0.754 | rule-based sentiment |
 | VADER (lexicon, threshold −0.05) | 0.750 | 0.840 | best VADER tuning |
 | Ridge classifier on letter features | 0.721 | 0.810 | linear baseline |
@@ -190,9 +191,9 @@ For the full list and exact formulas, see the docstrings in `src/features.py`.
 
 1. **Letter features carry a real, statistically significant sentiment signal** at the article level (p < 0.0001 vs permutation null).
 
-2. **Per-word effect sizes are small.** The strongest single feature (spectral power at frequency 1 of the letter-position sequence) has Pearson r = 0.034 with valence on the 13,914-word Warriner norms. Six features survive Bonferroni at α = 0.05/68.
+2. **Per-word effect sizes are small.** The strongest single feature is `vowel_ratio` (Pearson r = +0.049, with the mirror-image `consonant_ratio` at r = −0.049) on the 13,914-word Warriner norms; the DFT term `dft_power_k1` has r = −0.031. Eight features survive Bonferroni at α = 0.05/68.
 
-3. **The "math in words" is most salient in the spectral domain.** DFT features alone reach 0.7346 accuracy — almost as good as the full 68-feature model (0.7377). Gematria-style modular arithmetic (F2) and gematria traditions (F11) together account for less than 0.5% of the model.
+3. **The "math in words" is most salient in the spectral domain.** DFT features alone reach 0.7346 accuracy — almost as good as the full 68-feature model (0.7377). Gematria-style modular arithmetic (F2) and gematria traditions (F11) together account for less than 0.5% of the model. Dropping the modular-arithmetic family (F2) alone actually leaves accuracy at 0.7422 — within CV noise of, and numerically above, the full model — so the modular features are uninformative rather than merely weak (full table in `results/family_ablation.csv`).
 
 4. **The bias-variance regime is "features-bound, not data-bound".** The learning curve plateaus around n=1,376 examples. Adding more labeled data would not help much; adding more informative features would.
 

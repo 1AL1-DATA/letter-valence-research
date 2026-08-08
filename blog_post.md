@@ -33,7 +33,7 @@ I implemented 68 features in 12 families:
 
 For each article, I aggregated per-word features with mean, max, min, and standard deviation across the words, producing a 272-dimensional vector. Then a random forest on those vectors. Five-fold stratified cross-validation. Permutation test for significance. Learning curve to see whether more data would help. Family ablation to see which families matter.
 
-The headline result, in one sentence: **the random forest hits 0.7377 accuracy, which is 14 standard deviations above the permutation null distribution's mean of 0.684.**
+The headline result, in one sentence: **the random forest hits 0.7377 accuracy, which is 13.8 standard deviations above the permutation null distribution's mean of 0.679.**
 
 ## What doesn't work
 

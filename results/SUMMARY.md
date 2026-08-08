@@ -6,7 +6,7 @@
 
 ## The headline
 
-**A random forest trained on 68 letter-derived features reaches 0.7377 ± 0.0058 accuracy (F1 = 0.835) on the FinancialPhraseBank binary sentiment task.** That is 5-fold stratified cross-validation on 1,967 sentences (604 negative, 1,363 positive). The class-prior baseline (always predict positive) is 0.693. A permutation test (n=50) yields **p < 0.0001**: when we shuffle labels and re-run the experiment 50 times, the real accuracy (0.738) is 14 standard deviations above the null mean (0.684 ± 0.004).
+**A random forest trained on 68 letter-derived features reaches 0.7377 ± 0.0058 accuracy (F1 = 0.835) on the FinancialPhraseBank binary sentiment task.** That is 5-fold stratified cross-validation on 1,967 sentences (604 negative, 1,363 positive). The class-prior baseline (always predict positive) is 0.693. A permutation test (n=50) yields **p < 0.0001**: when we shuffle labels and re-run the experiment 50 times, the real accuracy (0.738) is 13.8 standard deviations above the null mean (0.679 ± 0.004).
 
 ## How we got here
 
@@ -34,8 +34,8 @@
 | Logistic Regression 5-fold CV accuracy | 0.7087 ± 0.0058 | linear baseline |
 | Ridge classifier 5-fold CV accuracy | 0.7209 ± 0.0048 | linear baseline |
 | Class-prior baseline accuracy | 0.6929 | always predict positive |
-| Stratified random baseline | 0.5000 ± 0.024 | n=100 trials, mean ± std |
-| Permutation null mean | 0.6839 ± 0.0037 | 50 permutations |
+| Stratified random baseline | 0.5741 ± 0.0082 | n=100 trials, mean ± std |
+| Permutation null mean | 0.6794 ± 0.0042 | 50 permutations |
 | Permutation null max | 0.6909 | never exceeds real |
 | **Permutation p-value** | **< 0.0001** | |
 | Learning curve: n=196 → n=1967 | 0.699 → 0.737 | Δ = +0.038 |

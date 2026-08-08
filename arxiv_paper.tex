@@ -51,7 +51,7 @@ The question of whether the letters of a word carry sentiment signal is a natura
 
 What the literature does not address is whether the \emph{letters} of a word (as opposed to its phonemes) carry a similar signal. Letters are visual, not acoustic. The mapping from letter to phoneme is non-trivial and language-specific. Yet if the sounds of a word carry sentiment signal, it is at least conceivable that the shapes of the letters --- through statistical regularities of letter sequences in emotionally-loaded words --- do too.
 
-We address this question by computing 68 features for each of the 13,914 English lemmas in the Warriner affective norms~\citep{warriner2013} and the 4,929 unique words in the FinancialPhraseBank~\citep{malo2014}. Features span 12 families and are computable from the letters of a single word plus optional corpus-level letter frequency statistics. A random forest trained on these features, aggregated across the words of each financial sentence, reaches $0.7377 \pm 0.0058$ 5-fold cross-validation accuracy on the binary positive-vs-negative task. The effect is small but real: a permutation test with 50 label shuffles yields $p < 0.0001$, and the observed accuracy is 14 standard deviations above the null mean.
+We address this question by computing 68 features for each of the 13,914 English lemmas in the Warriner affective norms~\citep{warriner2013} and the 4,929 unique words in the FinancialPhraseBank~\citep{malo2014}. Features span 12 families and are computable from the letters of a single word plus optional corpus-level letter frequency statistics. A random forest trained on these features, aggregated across the words of each financial sentence, reaches $0.7377 \pm 0.0058$ 5-fold cross-validation accuracy on the binary positive-vs-negative task. The effect is small but real: a permutation test with 50 label shuffles yields $p < 0.0001$, and the observed accuracy is 13.8 standard deviations above the null mean.
 
 The most interesting finding is where the signal lives. The \emph{spectral} family --- the Discrete Fourier Transform of the letter-position sequence --- is the strongest single predictor, reaching 0.7346 accuracy as a standalone feature set. The \emph{modular arithmetic} family (the gematria hypothesis: $A=1, B=2, \ldots, Z=26$, sum modulo 9, primality, digital root) does not survive Bonferroni correction at the word level and contributes marginally to the article-level model.
 
@@ -167,7 +167,7 @@ For feature importance, we run a leave-one-family-out ablation: drop each of the
 
 \subsection{Article-level classification}
 
-The headline result is in Table~\ref{tab:headline}. The random forest reaches $0.7377 \pm 0.0058$ 5-fold CV accuracy on the FinancialPhraseBank binary sentiment task, with $F_1 = 0.835$. This is significantly above the 0.693 class-prior baseline (permutation test with 50 shuffles, $p < 0.0001$; null mean $0.684 \pm 0.004$, null max $0.691$). The linear baselines (ridge: 0.7209, logistic regression: 0.7087) are below the random forest but above the class-prior. VADER at its default threshold (0.678) is below the class-prior; tuned to threshold $-0.05$ it reaches 0.750.
+The headline result is in Table~\ref{tab:headline}. The random forest reaches $0.7377 \pm 0.0058$ 5-fold CV accuracy on the FinancialPhraseBank binary sentiment task, with $F_1 = 0.835$. This is significantly above the 0.693 class-prior baseline (permutation test with 50 shuffles, $p < 0.0001$; null mean $0.679 \pm 0.004$, null max $0.691$). The linear baselines (ridge: 0.7209, logistic regression: 0.7087) are below the random forest but above the class-prior. VADER at its default threshold (0.678) is below the class-prior; tuned to threshold $-0.05$ it reaches 0.750.
 
 \begin{table}[ht]
 \centering
@@ -179,7 +179,7 @@ The headline result is in Table~\ref{tab:headline}. The random forest reaches $0
 Method & Accuracy & $F_1$ (binary) & vs class-prior (0.693) \\
 \midrule
 Class-prior baseline (always positive) & 0.693 & 0.819 & 0 \\
-Stratified random & $0.500 \pm 0.024$ & --- & $-0.193$ \\
+Stratified random & $0.574 \pm 0.008$ & 0.693 & $-0.119$ \\
 \midrule
 Ridge classifier (linear) & $0.7209 \pm 0.0048$ & 0.810 & $+0.028$ \\
 Logistic regression (linear) & $0.7087 \pm 0.0058$ & 0.799 & $+0.016$ \\

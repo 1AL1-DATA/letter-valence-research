@@ -11,7 +11,9 @@
     },
     "stratified_random": {
       "accuracy_mean": 0.5740823589222166,
-      "accuracy_std": 0.008243915828998303
+      "accuracy_std": 0.008243915828998303,
+      "f1_mean": 0.6926705796038151,
+      "f1_std": 0.005948562889082789
     }
   },
   "random_forest_5fold": {
@@ -79,13 +81,13 @@
   },
   "permutation_test": {
     "observed_accuracy": 0.737673241110293,
-    "n_permutations": 5.0,
-    "null_mean": 0.6838826674933157,
-    "null_std": 0.0036865634703995083,
-    "null_min": 0.6812273155862104,
+    "n_permutations": 50.0,
+    "null_mean": 0.6793591144521514,
+    "null_std": 0.0042236532470033734,
+    "null_min": 0.671063406569277,
     "null_max": 0.6908978184213586,
-    "null_95pct": 0.689577504811356,
-    "null_99pct": 0.690633755699358,
+    "null_95pct": 0.686927577788972,
+    "null_99pct": 0.6901484610118702,
     "p_value": 0.0
   }
 }
