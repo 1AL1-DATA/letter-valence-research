@@ -30,7 +30,8 @@ All notable changes to this project are documented here. The format follows
 - The cheap word tier transfers out of finance: trained only on FPB it beats the
   finance-tuned FinancialBERT on general news (0.4209 vs 0.3041).
 - The finance-tuned heavy is the domain-locked part: FinancialBERT lands *below
-  chance* on general news (0.3041; predicts neutral on 65.3% of clear sentences).
+  the 61.6% majority-class baseline* on general news (0.3041; predicts neutral on
+  65.3% of clear sentences).
 - With a domain-appropriate heavy the cascade again beats heavy-only
   (0.6190 vs 0.5760) while the cheap tier absorbs ~24% of calls at 91.8% accuracy.
 - The cascade *approach* is a general feature; the heavy model must match the domain.
@@ -67,6 +68,32 @@ All notable changes to this project are documented here. The format follows
   cheap tier 24.3% @ 91.8%), and full reproduction commands. Abstract updated;
   NewsMTSC citation added.
 - **`CITATION.cff`** bumped to v1.2.0 (2026-08-07) with the NewsMTSC reference.
+
+## [1.2.3] - 2026-08-08
+
+### Added (leak & baseline disclosures)
+- **FinancialBERT-on-FPB leak disclosed.** The FPB heavy tier
+  (`ahmedrachid/FinancialBERT-Sentiment-Analysis`) was itself fine-tuned on
+  FinancialPhraseBank (its HF model card trains on the full benchmark), so ~90%
+  of the 4,846 FPB evaluation sentences were seen by the heavy tier during its
+  own fine-tuning. The in-domain accuracies (0.9512 / 0.9558) are flagged as
+  optimistic in-sample ceilings in `arxiv_paper.tex`, `README.md`,
+  `METHODOLOGY.md`, `results/SUMMARY.md`, `research_report.md`. The relative
+  cascade-vs-heavy comparison (both share the identical heavy tier) and the
+  compute-savings conclusion are unaffected.
+- **Majority-class baseline added to the general-news clear set.** The clear set
+  is imbalanced (401 negative / 250 positive), so an "always-negative" baseline
+  scores 0.6160 — *above* heavy_gen (0.5760) and every cheaper tier; only the
+  news-cheap cascade (0.6190) clears it. Baseline row added to the clear-set
+  tables in `README.md`, `METHODOLOGY.md`, `results/SUMMARY.md`,
+  `research_report.md`; "below chance" claims re-phrased as "below the
+  majority-class baseline and below 50% random guessing".
+- **NewsMTSC train/devtest overlap disclosed.** Four of the 1,067 devtest
+  sentences (two of them clear-polarity) also appear in the NewsMTSC training
+  split used for the news cheap tier — a ~0.4% overlap whose worst-case
+  contribution to the +4.3-point headline is ≤ ~0.3 points. Noted in
+  `arxiv_paper.tex`, `README.md`, `METHODOLOGY.md`, `results/SUMMARY.md`,
+  `research_report.md`.
 
 ## [1.2.2] - 2026-08-08
 

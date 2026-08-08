@@ -281,7 +281,7 @@ decided only 3.6\% of sentences. The production cascade is now \textbf{two tiers
 \end{itemize}
 
 On the FinancialPhraseBank clear-polarity set (n = 1,967, 5-fold CV, heavy =
-\texttt{ahmedrachid/FinancialBERT-Sentiment-Analysis}) the cascade reaches
+\texttt{ahmedrachid/\allowbreak FinancialBERT-Sentiment-Analysis}) the cascade reaches
 \textbf{0.9512} accuracy (macro-F1 0.9643) versus \textbf{0.9558} heavy-only
 (macro-F1 0.9716): an exact McNemar test gives $p = 0.15$ (not significant; 20
 vs.\ 11 discordant pairs), so
@@ -289,6 +289,14 @@ the cascade matches the transformer on accuracy while the cheap tier decides
 \textbf{36.6\% of calls at 97.2\%} accuracy --- roughly a third of the
 transformer's load absorbed at ~1\% of its compute. Full per-method metrics
 (negative/positive precision, recall, F1) are in \texttt{results/cascade\_benchmark.json}.
+One caveat applies to the \emph{absolute} numbers here:
+\texttt{ahmedrachid/\allowbreak FinancialBERT-Sentiment-Analysis} was itself fine-tuned on
+FinancialPhraseBank (its model card reports fine-tuning on the dataset, with its
+own 485-sentence test split), so the heavy tier already saw $\sim$90\% of our
+4{,}846 evaluation sentences during fine-tuning; the in-domain accuracies are
+therefore optimistic (in-sample) ceilings. The relative cascade-versus-heavy
+comparison --- both systems share the identical heavy tier --- and the
+compute-savings conclusion are unaffected.
 
 \subsection{Cross-domain generalisation (NewsMTSC)}
 
@@ -305,7 +313,7 @@ two fixed heavy tiers were tested:
   supervision).
 \item \textbf{cheap\_news} --- same architecture retrained on the 7,758
   NewsMTSC train sentences (in-domain reference).
-\item \textbf{heavy\_fin} = \texttt{ahmedrachid/FinancialBERT-Sentiment-Analysis};
+\item \textbf{heavy\_fin} = \texttt{ahmedrachid/\allowbreak FinancialBERT-Sentiment-Analysis};
   \textbf{heavy\_gen} = \texttt{cardiffnlp/twitter-roberta-base-sentiment-latest}.
 \end{itemize}
 
@@ -343,9 +351,11 @@ Two findings follow:
    non-transformer component (0.4931), numerically above VADER but not
    significantly so (exact McNemar $p = 0.20$).
 2. \textbf{The finance-tuned heavy is the domain-locked part.} FinancialBERT
-   collapses on general news --- it predicts neutral on 65.3\% of the 651
-   clear-polarity sentences (its \texttt{neutral\_predicted} fraction) and lands
-   below chance (0.3041; Wilson 95\% CI [0.270, 0.341]). With a
+    collapses on general news --- it predicts neutral on 65.3\% of the 651
+    clear-polarity sentences (its \texttt{neutral\_predicted} fraction) and lands
+    at 0.3041 (Wilson 95\% CI [0.270, 0.341]) --- well under both uniform random
+    guessing (0.5 on this two-class clear set) and the majority-class baseline of
+    0.616 (401 negative / 250 positive). With a
    domain-appropriate heavy, only the \emph{news}-cheap cascade is a supported
     win: it beats heavy-only \textbf{0.6190 vs.\ 0.5760} (+4.3 points; exact
     McNemar $p \approx 8\times10^{-7}$ at the 0.01 level; paired-Wilson CI on the
@@ -459,7 +469,11 @@ $p \approx 3\times10^{-61}$; paired-difference CI [0.107, 0.128]). A further
 caveat: FinancialBERT's low 15.4\% false-polarity rate on the general
 borderline set partly reflects out-of-domain conservatism --- it labels 84.6\%
 of those sentences neutral --- the same 65.3\% neutral rate that sinks it on
-the clear set. Effect sizes on general news are small, and the p-values are
+the clear set. We also checked for dataset leakage on the general-news side:
+four of the 1,067 devtest sentences (two of them clear-polarity) also appear in
+the NewsMTSC training split that trains the news cheap tier, a $\sim$0.4\%
+overlap whose worst-case contribution to the +4.3-point headline is at most
+$\sim$0.3 points. Effect sizes on general news are small, and the p-values are
 computed on fixed, overlapping samples; we encourage replication on additional
 corpora before these cross-domain results are treated as stable.
 

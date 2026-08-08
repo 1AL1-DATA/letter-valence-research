@@ -138,6 +138,13 @@ was **strictly dominated** by a word-level cheap tier and retired. The cascade i
 | Heavy tier share | 100% | 63.4% |
 | McNemar vs heavy | — | **p = 0.15 (ns)** |
 
+> **Leak caveat:** the heavy tier (`ahmedrachid/FinancialBERT-Sentiment-Analysis`)
+> was itself fine-tuned on FinancialPhraseBank, so ~90% of these 4,846 sentences
+> were seen by the heavy tier during its own fine-tuning; the in-domain
+> accuracies are optimistic in-sample ceilings. The relative cascade-vs-heavy
+> comparison (both share the identical heavy) and the compute-savings conclusion
+> are unaffected.
+
 ### Borderline set (n=2,879 neutral sentences), false-polarity rate
 
 | Method | False polarity |
@@ -194,6 +201,14 @@ finance. Two cheap-tier variants × two fixed heavy tiers:
 | General BERT (heavy_gen) | 0.5760 [0.538, 0.613] | 0.6641 | — |
 | Cascade (FPB cheap → gen heavy) | 0.5975 [0.559, 0.635] | 0.6741 | 19.8% @ 83.0% |
 | **Cascade (news cheap → gen heavy)** | **0.6190 [0.581, 0.656]** | **0.6940** | **24.3% @ 91.8%** |
+| Majority-class baseline ("always negative") | 0.6160 | — | — |
+
+The clear set is imbalanced (401 negative / 250 positive), so the majority-class
+baseline is 0.6160: **only the news-cheap cascade (0.6190) clears it**, and the
+heavy-only 0.5760 is *below* it. Dataset-leakage check: four of the 1,067
+devtest sentences (two of them clear-polarity) also appear in the NewsMTSC
+training split used for the news cheap tier — a ~0.4% overlap whose worst-case
+contribution to the +4.3-point headline is ≤ ~0.3 points.
 
 Significance (exact two-sided McNemar, paired): only the **news-cheap cascade** is
 a supported win over heavy-only (0.6190 vs 0.5760, **p ≈ 8×10⁻⁷**). The FPB-cheap
@@ -250,7 +265,8 @@ polarity-error reduction.
    component (0.4931), not significantly different from VADER (p = 0.20).
 2. **The finance-tuned heavy is the domain-locked part.** FinancialBERT collapses on
    general news — it predicts neutral on 65.3% of clear-polarity sentences and lands
-   *below chance* (0.3041, CI [0.270, 0.341]). With a domain-appropriate heavy, the
+   *below the majority-class baseline* (0.3041 vs 0.616) and below 50% random
+   guessing. With a domain-appropriate heavy, the
    **news-cheap cascade** beats heavy-only (0.6190 vs 0.5760, **+4.3 points,
    paired-Wilson CI [2.8, 4.9], bootstrap CI [2.5, 6.3]**, McNemar p ≈ 8×10⁻⁷,
    the edge resting on 31 of 34 discordant pairs)
