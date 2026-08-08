@@ -97,7 +97,7 @@ letter-valence-research/
 ├── research_report.md         ← full formal report (~22 KB)
 ├── lit_digest.md              ← per-paper digest of 5 foundational works
 ├── arxiv_paper.tex           ← arXiv preprint (LaTeX, NeurIPS-style)
-└── arxiv_paper.pdf           ← compiled version (13 pages, 623 KB)
+└── arxiv_paper.pdf           ← compiled version (14 pages, 635 KB)
 ```
 
 ## Reproducing the headline result
@@ -231,9 +231,12 @@ and routes everything else to the heavy tier:
 
 The 0.9512 vs 0.9558 difference is **not statistically significant** (exact McNemar
 p = 0.15), but the cheap tier absorbs a third of the transformer's workload — at 1%
-of the compute — with a modest 2.8-point increase in false polarity on genuinely
-neutral sentences. **This is the "letter pre-filter" hypothesis tested to its
-conclusion: the signal is real but lives in words, not letters.** See
+of the compute. On the neutral set (n = 2,879) the cascade cuts the cheap tier's
+false-polarity rate from 19.6% to 7.7% (**p ≈ 3×10⁻⁶¹**, exact McNemar) while paying
+a small but real cost versus heavy-only (7.7% vs 4.9%, **p ≈ 4×10⁻²⁵**): the
+"small polarity cost" framing is statistically supported, and so is the reduction
+relative to the cheap tier. **This is the "letter pre-filter" hypothesis tested to
+its conclusion: the signal is real but lives in words, not letters.** See
 `src/benchmark_cascade.py`, `results/cascade_benchmark.json`, and
 `figures/cascade_sentiment_eval.png`.
 
@@ -252,29 +255,52 @@ fixed heavy tiers:
 - **`heavy_fin`** — FinancialBERT (finance-tuned), **`heavy_gen`** — a general-domain
   transformer (`cardiffnlp/twitter-roberta-base-sentiment-latest`).
 
-| Method | Clear acc | Macro-F1 | False-pol. on neutral |
+| Method | Clear acc (Wilson 95% CI) | Macro-F1 | False-pol. on neutral (95% CI) |
 |---|---|---|---|
-| Cheap tier trained on FPB only | 0.4209 | 0.5523 | 30.5% |
-| Cheap tier trained on news | 0.4931 | 0.6069 | 26.7% |
-| **Cascade (FPB cheap → gen heavy)** | **0.5975** | 0.6741 | 27.4% |
-| **Cascade (news cheap → gen heavy)** | **0.6190** | 0.6940 | 26.4% |
-| FinancialBERT alone (heavy_fin) | 0.3041 | 0.4581 | 15.4% |
-| General BERT alone (heavy_gen) | 0.5760 | 0.6641 | 23.3% |
-| VADER | 0.4685 | 0.5744 | 36.5% |
-| Keyword lexicon | 0.0661 | 0.1199 | 5.3% |
+| Keyword lexicon | 0.0661 [0.049, 0.088] | 0.1199 | 5.3% [3.5, 7.9] |
+| FinancialBERT alone (heavy_fin) | 0.3041 [0.270, 0.341] | 0.4581 | 15.4% [12.2, 19.2] |
+| Cheap tier trained on FPB only | 0.4209 [0.384, 0.459] | 0.5523 | 30.5% [26.3, 35.1] |
+| VADER | 0.4685 [0.431, 0.507] | 0.5744 | 36.5% [32.1, 41.3] |
+| Cheap tier trained on news | 0.4931 [0.455, 0.531] | 0.6069 | 26.7% [22.7, 31.1] |
+| General BERT alone (heavy_gen) | 0.5760 [0.538, 0.613] | 0.6641 | 23.3% [19.5, 27.6] |
+| Cascade (FPB cheap → gen heavy) | 0.5975 [0.559, 0.635] | 0.6741 | 27.4% [23.3, 31.9] |
+| **Cascade (news cheap → gen heavy)** | **0.6190 [0.581, 0.656]** | **0.6940** | 26.4% [22.4, 30.9] |
 
-Two honest findings:
+All significance is exact two-sided McNemar on the paired sentences. Two honest
+findings, with the significance that survives the numbers:
 
 1. **The cheap word tier transfers out of finance.** Trained on nothing but
    FinancialPhraseBank, it still beats the finance-tuned FinancialBERT on general
-   news (0.4209 vs 0.3041) and approaches VADER; retrained on news it is the
-   strongest single non-transformer component (0.4931).
-2. **The finance-tuned heavy is the domain-locked part.** FinancialBERT collapses on
-   general news — it predicts neutral on 65.3% of clear-polarity sentences and lands
-   *below chance* (0.3041). With a domain-appropriate general heavy, the cascade again
-   beats heavy-only (0.6190 vs 0.5760, McNemar p < 0.01) while the cheap tier absorbs
-   ~24% of calls at 91.8% accuracy (threshold sweep reaches 0.70 accuracy). The
-   cascade *approach* is general; the heavy model needs to match the domain.
+   news (0.4209 vs 0.3041, **p ≈ 4×10⁻⁷**) and closes most of the gap to VADER —
+   though it remains significantly below it (p ≈ 5×10⁻⁴). Retrained on news it is
+   the strongest single non-transformer component (0.4931), numerically above
+   VADER but not significantly so (p = 0.20).
+2. **The finance-tuned heavy is the domain-locked part.** FinancialBERT collapses
+   on general news — it predicts neutral on 65.3% of clear-polarity sentences and
+   lands *below chance* (0.3041, CI [0.270, 0.341]). With a domain-appropriate
+   general heavy, **only the news-cheap cascade is a supported win**: 0.6190 vs
+   0.5760, **McNemar p ≈ 8×10⁻⁷**. The FPB-cheap cascade (0.5975) is numerically
+   higher than heavy-only but **not significant** (p = 0.02, above the 0.01
+   multiple-comparison threshold) — a point estimate, not an improvement. Both
+   cascades do beat their own cheap tiers (p ≈ 3×10⁻⁹ and 10⁻¹³). The cheap tier
+   absorbs 24.3% of clear calls (n = 158, CI [21.1, 27.7]) at 91.8% accuracy (CI
+   [86.4, 95.1]). A threshold sweep reaches 0.699 accuracy at a 53% heavy share —
+   the best point of an **in-sample** grid, an upper bound, not a held-out
+   estimate.
+
+**Borderline nuance (n = 416 neutral sentences).** On general news the cascade is
+*not* a false-polarity reducer: routing barely moves the rate relative to the
+cheap tier (26.4 vs 26.7%, p = 1.0; 27.4 vs 30.5%, p = 0.25) and is slightly but
+significantly *above* heavy-only (p ≈ 2×10⁻⁴ / <10⁻⁴). Keyword's low 5.3% is
+bought by never committing — it predicts neutral on 90.5% of clear sentences
+(accuracy 0.066). Adjacent rates are within each other's 95% CI (±~4–5 points),
+so only the coarse ordering and the paired differences above are supported. This
+contrasts with the **finance** borderline set (n = 2,879), where the cascade cuts
+cheap-tier false polarity 19.6% → 7.7% (p ≈ 3×10⁻⁶¹) at a small real cost vs
+heavy-only (p ≈ 4×10⁻²⁵). On general news the cascade's benefit is the clear-set
+accuracy gain + compute saving, not polarity-error reduction.
+
+The cascade *approach* is general; the heavy model needs to match the domain.
 
 See `src/benchmark_general.py`, `results/general_news_benchmark.json`, and
 `figures/general_news_eval.png`. The dataset lives in `data/newsmtsc/`.

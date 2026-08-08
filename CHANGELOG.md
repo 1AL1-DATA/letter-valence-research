@@ -68,6 +68,42 @@ All notable changes to this project are documented here. The format follows
   NewsMTSC citation added.
 - **`CITATION.cff`** bumped to v1.2.0 (2026-08-07) with the NewsMTSC reference.
 
+## [1.2.2] - 2026-08-08
+
+### Changed (statistical-robustness hardening)
+- **Borderline interpretation corrected** in `README.md`, `results/SUMMARY.md`,
+  `METHODOLOGY.md`, `research_report.md`, `arxiv_paper.tex`: on the general-news
+  borderline set (n = 416) the cascade is **not** a false-polarity reducer.
+  Exact paired McNemar: vs its own cheap tier the rate is flat (26.4 vs 26.7%,
+  p = 1.0; 27.4 vs 30.5%, p = 0.25) and vs heavy-only it is slightly but
+  significantly *above* (p ≈ 2×10⁻⁴ / <10⁻⁴). The finance borderline set
+  (n = 2,879) is the opposite: the cascade cuts cheap-tier false polarity
+  19.6% → 7.7% (p ≈ 3×10⁻⁶¹) while paying a small significant cost vs heavy-only
+  (p ≈ 4×10⁻²⁵). The previous "reduces false polarity on the FPB-trained
+  variants" framing in the paper §6 was removed.
+- **Clear-set significance made explicit** (exact McNemar, n = 651): only the
+  news-cheap cascade is a supported win over heavy-only (0.6190 vs 0.5760,
+  p ≈ 8×10⁻⁷); the FPB-cheap cascade (0.5975) is numerically higher but not
+  significant (p = 0.02, above the 0.01 multiple-comparison threshold). Both
+  cascade rows were un-bolded/nuanced accordingly. cheap_fpb vs heavy_fin
+  p ≈ 4×10⁻⁷; cheap_news vs VADER p = 0.20 (ns); cheap_fpb vs VADER p ≈ 5×10⁻⁴.
+- **Wilson 95% CIs added** to every accuracy and false-polarity table and the
+  key point estimates (24.3% share n = 158, CI [21.1, 27.7]; 91.8% accuracy CI
+  [86.4, 95.1]; all borderline rates ±~4–5 pts on n = 416).
+- **Threshold sweep flagged as in-sample**: the 0.699 (general) and 0.9583 (FPB,
+  at heavy share ≈ 1.0) best points are grid maxima on the fixed split, stated
+  as upper bounds, not held-out estimates.
+- **Keyword caveat added**: its low borderline false-polarity (5.3% / 6.6%) is
+  trivially conservative — it predicts neutral on 90.5% (72.7%) of the clear set
+  (accuracy 0.066 / 0.191).
+- **New robustness/limitations notes**: single held-out split, no repeated
+  resampling, no independent replication (paper §6 and METHODOLOGY.md).
+
+### Added
+- **`arxiv_paper.tex` / `arxiv_paper.pdf`** re-rendered: clear-set and
+  borderline tables now carry Wilson 95% CI columns; §6 rewritten with the
+  corrected borderline analysis and a "Robustness and limits" paragraph.
+
 ## [1.1.0] - 2026-08-06
 
 ### Added
@@ -133,6 +169,7 @@ All notable changes to this project are documented here. The format follows
 - Hierarchical classification for long documents: split into sentences, aggregate predictions.
 - Ablation on aggregation strategy: mean/max/min/std vs learned attention.
 
+[1.2.2]: https://github.com/1AL1-DATA/letter-valence-research/releases/tag/v1.2.2
 [1.2.1]: https://github.com/1AL1-DATA/letter-valence-research/releases/tag/v1.2.1
 [1.2.0]: https://github.com/1AL1-DATA/letter-valence-research/releases/tag/v1.2.0
 [1.1.0]: https://github.com/1AL1-DATA/letter-valence-research/releases/tag/v1.1.0
