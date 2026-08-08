@@ -352,17 +352,23 @@ Two findings follow:
    ($p = 3\times10^{-9}$ and $p = 10^{-13}$). The \emph{FPB}-cheap cascade is
    numerically higher than heavy-only (0.5975) but this is \emph{not} significant
    (exact McNemar $p = 0.02$, above the multiple-comparison threshold), so it
-   should be read as a point estimate, not an improvement; the two cascade
-   variants do not differ reliably at the pre-specified $\alpha = 0.01$ level
+    should be read as a point estimate, not an improvement; the two cascade
+    variants do not differ reliably at the corrected $\alpha = 0.01$ level
    ($p = 0.049$; 95\% bootstrap CI on the difference [+0.2, +4.2] points is
-   marginal). The cheap tier absorbs 24.3\% of clear calls
-   (n = 158; Wilson 95\% CI [0.211, 0.277]) at 91.8\% accuracy (CI [0.864,
-   0.951]). A threshold sweep (routing threshold $\in \{0.4,\dots,1.0\}$,
-   band $\in \{0.05,0.1,0.15\}$, re-routed on stored per-instance valences)
-   reaches 0.699 cascade accuracy at a 53\% heavy-tier share; this is the best
-   point of an \emph{in-sample} grid, hence an upper bound rather than a
-   held-out estimate. The cascade \emph{approach} generalises; the heavy model
-   must match the domain.
+    marginal). The cheap tier absorbs 24.3\% of clear calls
+    (n = 158; Wilson 95\% CI [0.211, 0.277]) at 91.8\% accuracy (CI [0.864,
+    0.951]). A routing-only threshold sweep (routing threshold
+    $\in \{0.4,\dots,1.0\}$, label band held fixed at 0.1, re-routed on stored
+    per-instance valences) reaches 0.654 cascade accuracy at a 53\% heavy-tier
+    share for the news-cheap cascade (0.647 for the FPB-cheap variant), versus
+    0.619 at the default operating point; this is the best point of an
+    \emph{in-sample} grid, hence an upper bound rather than a held-out
+    estimate. The label band is deliberately not swept: it is confounded with
+    the routing threshold --- a narrower band raises clear-set accuracy
+    trivially (fewer neutral predictions on a set that contains no neutrals) ---
+    so a band-$\times$-threshold maximum (0.699 in earlier drafts) was a label
+    artifact, not a routing gain. The cascade \emph{approach} generalises; the
+    heavy model must match the domain.
 
 \paragraph{Borderline set (n = 416 neutral sentences).}
 Table~\ref{tab:newsmt_border} reports the false-polarity rate (fraction of
@@ -379,23 +385,29 @@ significantly \emph{above} heavy-only} (26.4\% and 27.4\% vs.\ heavy\_gen's
 finance-only borderline set (n = 2,879), where the cascade cuts the cheap tier's
 false polarity from 19.6\% to 7.7\% ($p = 3\times10^{-61}$) while remaining
 above heavy-only's 4.9\% ($p = 4\times10^{-25}$). On general news, the cascade's
-benefit is therefore the clear-polarity accuracy gain and the compute saving, not
-polarity-error reduction; it should not be claimed as a false-polarity reducer
-out of domain. Paired tests resolve a staircase rather than a flat ordering:
-keyword is significantly below heavy\_fin ($p = 7\times10^{-7}$), heavy\_fin
-below heavy\_gen ($p = 2\times10^{-3}$), heavy\_gen below the two cascades
-(13/0 and 17/0 one-directional discordant pairs, $p = 2\times10^{-4}$ /
-$10^{-5}$), and cheap\_fpb below VADER ($p = 4\times10^{-3}$). The central
-plateau --- heavy\_gen through the cheap tiers (23--31\%) --- is not otherwise
-resolvable at n = 416: adjacent members differ by less than the paired
-resolution of $\sim$7 points at $\alpha = 0.01$ / 80\% power (pairwise
-$p \ge 0.25$), so no within-plateau ordering is supported; the cascade's step
-above heavy\_gen is significant only because its 13 and 17 discordant pairs are
-perfectly one-directional.
+    benefit is therefore the clear-polarity accuracy gain and the compute saving, not
+    polarity-error reduction; it should not be claimed as a false-polarity reducer
+    out of domain. Paired tests resolve a staircase rather than a flat ordering,
+    but the resolvable difference is comparison-specific: a paired McNemar at
+    $\alpha = 0.01$ / 80\% power resolves about $2.8\sqrt{m}/n$ points, where $m$
+    is the number of discordant pairs --- $\sim$7 points for the
+    cascade-versus-cheap comparisons ($m \approx 110$) but only $\sim$2.4--2.8
+    points for the cascade-versus-heavy comparisons ($m = 13$ and 17). Supported
+    steps: keyword is significantly below heavy\_fin (5.3\% vs.\ 15.4\%,
+    $p = 7\times10^{-7}$), heavy\_fin below heavy\_gen (15.4\% vs.\ 23.3\%,
+    $p = 2\times10^{-3}$), heavy\_gen below the two cascades (23.3\% vs.\
+    26.4\%/27.4\%; 13/0 and 17/0 one-directional discordant pairs,
+    $p = 2\times10^{-4}$ / $<10^{-4}$), and cheap\_fpb below VADER (30.5\% vs.\
+    36.5\%, $p = 4\times10^{-3}$). Not supported: the cascade-versus-cheap-tier
+    steps (observed 0.2--3.1 points, below the $\sim$7-point resolution; $p =
+    1.0$, 0.86, 0.25), so within the 23--31\% central plateau the cascade and its
+    own cheap tier are indistinguishable in this sample. The cascade's step above
+    heavy\_gen is significant only because its 13 and 17 discordant pairs are
+    perfectly one-directional, not because the gap is large.
 
 \begin{table}[ht]
 \centering
-\caption{False-polarity rate on 416 held-out neutral NewsMTSC sentences (lower is better), with Wilson 95\% CI. Rates within the CI of one another are not separable at n = 416.}
+\caption{False-polarity rate on 416 held-out neutral NewsMTSC sentences (lower is better), with Wilson 95\% CI. CI overlap alone does not settle separability: paired exact-McNemar comparisons resolve the steps listed in the text (e.g.\ heavy\_gen below the cascades despite overlapping CIs).}
 \label{tab:newsmt_border}
 \small
 \begin{tabular}{lcc}
@@ -417,20 +429,23 @@ VADER & 36.5\% & [32.1, 41.3] \\
 \paragraph{Robustness and limits.} All cross-domain conclusions rest on a
 single held-out split (n = 651 clear / 416 borderline) from one corpus and one
 language, with no repeated resampling and no independent replication. The
-paired (exact McNemar) p-values are two-sided and pre-specified at
-$\alpha = 0.01$ for the cascade-vs-baseline comparisons. The supported claims
+paired (exact McNemar) p-values are two-sided and are tested against
+$\alpha = 0.01$ --- a Bonferroni correction over the five cascade-versus-
+baseline pairwise comparisons at the conventional 0.05 level, not a
+sample-adaptive threshold. The supported claims
 are: (i) the \emph{news}-cheap cascade beats heavy-only on clear-polarity
 accuracy by +4.3 points (95\% paired-Wilson CI [2.8, 4.9] points; a 20{,}000-resample
 bootstrap CI on the difference is [2.5, 6.3]); (ii) the \emph{FPB}-cheap
 cascade does not ($p = 0.02$); (iii) the two cascade variants do not differ
-reliably --- 0.6190 vs.\ 0.5975, $p = 0.049$, above the pre-specified
+reliably --- 0.6190 vs.\ 0.5975, $p = 0.049$, above the corrected
 $\alpha = 0.01$ level, with a 95\% bootstrap CI on the difference of
 [+0.2, +4.2] points sitting at the boundary of zero; (iv) on the
 general-news borderline set the cascade is not a false-polarity reducer, and
 the 0--3-point gaps to its own cheap tier lie below the resolution of this
-sample --- at n = 416 a paired test at $\alpha = 0.01$ / 80\% power resolves
-only differences of $\sim$7 points --- whereas the 13/0 and 17/0 discordant
-pairs behind the \emph{worst}-than-heavy 3.1/4.1-point gaps are significant
+sample --- for the cascade-versus-cheap comparisons ($m \approx 110$ discordant
+pairs) a paired test at $\alpha = 0.01$ / 80\% power resolves only
+differences of $\sim$7 points --- whereas the 13/0 and 17/0 discordant
+pairs behind the \emph{worse}-than-heavy 3.1/4.1-point gaps are significant
 because every discordant pair points the same way; (v) the in-domain (FPB)
 false-polarity reduction is large and highly significant (19.6\% $\to$ 7.7\%,
 $p \approx 3\times10^{-61}$; paired-difference CI [0.107, 0.128]). A further

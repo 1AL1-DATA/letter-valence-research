@@ -221,8 +221,10 @@ and in doing so replaces the letter tiers with a word-level cheap tier.
   score distributions for every method (deployed, full-data models).
 - **Metrics:** accuracy + Wilson 95% CI, macro-F1, per-class precision/recall/F1,
   exact two-sided McNemar significance, and cascade tier routing.
-- **Threshold sweep:** (cheap_threshold, label_band) pairs are re-routed cheaply on
-  stored per-instance component valences, without re-running the heavy tier.
+- **Threshold sweep:** routing thresholds are re-routed cheaply on stored
+  per-instance component valences, without re-running the heavy tier. The label
+  band is held fixed at 0.1 — varying it is confounded with routing (a narrower
+  band trivially raises clear-set accuracy), so it is not swept.
 
 ### The cheap tier
 
@@ -315,25 +317,34 @@ Interpretation (significance = exact two-sided McNemar on the paired sentences):
    [2.8, 4.9] points, bootstrap CI [2.5, 6.3]; McNemar p ≈ 8×10⁻⁷); the FPB-cheap
    cascade (0.5975) is numerically higher but not significant (p = 0.02, above the
    0.01 multiple-comparison threshold); and the two cascade variants do not differ
-   reliably at the pre-specified α = 0.01 level (p = 0.049; 95% bootstrap CI on
+   reliably at the corrected α = 0.01 level (p = 0.049; 95% bootstrap CI on
    the difference [+0.2, +4.2] points is marginal). The cheap tier absorbs 24.3% of calls (n =
-   158, CI [21.1, 27.7]) at 91.8% accuracy. The threshold-sweep best (0.699) is an
-   **in-sample** grid maximum, an upper bound, not a held-out estimate.
+   158, CI [21.1, 27.7]) at 91.8% accuracy. A routing-only threshold sweep
+   (band held fixed at 0.1) reaches 0.654 accuracy at a 53% heavy share (0.647
+   for the FPB-cheap variant); the best point is an **in-sample** grid maximum,
+   an upper bound, not a held-out estimate. The label band is not swept: it is
+   confounded with routing — a narrower band trivially raises accuracy on a
+   clear-only set — and the earlier 0.699 band-varying maximum was that
+   artifact.
 
 On the **borderline set** (n = 416 neutral sentences) the cascade is *not* a
 false-polarity reducer out of domain: versus its own cheap tier the rate is flat
 (26.4 vs 26.7%, p = 1.0; 27.4 vs 30.5%, p = 0.25) and versus heavy-only it is
 slightly but significantly *above* (26.4%/27.4% vs 23.3%, p ≈ 2×10⁻⁴ / <10⁻⁴).
-Power matters here: at n = 416 a paired test at α = 0.01 / 80% power resolves
-only ~7-point differences, so the 0–3-point gaps to the cheap tier mean
-"indistinguishable in this sample", not "equal"; the significant *worse*-than-heavy
-gaps rest on 13/0 and 17/0 discordant pairs, significant only because they are
-perfectly one-directional. Paired tests resolve a staircase, not a flat ordering:
-keyword is significantly below heavy_fin (p ≈ 7×10⁻⁷), heavy_fin below heavy_gen
-(p ≈ 2×10⁻³), heavy_gen below the cascades (13/0 and 17/0 discordant pairs), and
-cheap_fpb below VADER (p ≈ 4×10⁻³); the central plateau — heavy_gen through the
-cheap tiers (23–31%) — is not otherwise resolvable (adjacent members differ by
-less than the ~7-point resolution; pairwise p ≥ 0.25). Keyword's 5.3% is
+Power matters here: the resolvable difference is comparison-specific — a paired
+test at α = 0.01 / 80% power resolves ≈ 2.8·√m/n points for m discordant pairs,
+i.e. ~7 points for the cascade-vs-cheap comparisons (m ≈ 110) but only
+~2.4–2.8 points for the cascade-vs-heavy comparisons (m = 13/17). So the
+0–3-point gaps to the cheap tier mean "indistinguishable in this sample", not
+"equal"; the significant *worse*-than-heavy gaps rest on 13/0 and 17/0
+discordant pairs, significant only because they are perfectly one-directional.
+Paired tests resolve a staircase, not a flat ordering: keyword is significantly
+below heavy_fin (p ≈ 7×10⁻⁷), heavy_fin below heavy_gen (p ≈ 2×10⁻³), heavy_gen
+below the cascades (13/0 and 17/0 one-directional discordant pairs), and
+cheap_fpb below VADER (p ≈ 4×10⁻³). Not supported: the cascade-vs-cheap-tier
+steps (0.2–3.1 points, below the ~7-point resolution; p = 1.0 / 0.86 / 0.25), so
+within the 23–31% central plateau the cascade and its own cheap tier are
+indistinguishable in this sample. Keyword's 5.3% is
 trivially conservative (predicts neutral on 90.5% of the clear set), and part of
 FinancialBERT's 15.4% is the same out-of-domain conservatism — it labels 84.6% of
 the borderline sentences neutral. This is the opposite of the finance

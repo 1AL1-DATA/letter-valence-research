@@ -11,7 +11,9 @@ made in README / SUMMARY / METHODOLOGY / research_report / arxiv_paper:
   resample bootstrap CIs on the headline accuracy differences;
 * per-comparison resolvable difference at alpha = 0.01 / 80% power, i.e.
   2.802 * sqrt(m) / n for m discordant pairs — the power analysis that says
-  what the n = 416 null results do and do not mean.
+  what the n = 416 null results do and do not mean;
+* the routing-only threshold sweep (label band held fixed at 0.1) that backs
+  the 0.654 / 0.647 general best points and the FPB best = heavy-only result.
 
 Run:
     cd /home/a/letter-valence-research
@@ -32,7 +34,7 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, "/home/a/esg-dashboard/src")
 
-from src.benchmark_cascade import predict_from_v  # noqa: E402
+from src.benchmark_cascade import predict_from_v, cascade_predict  # noqa: E402
 from scipy.stats import binomtest  # noqa: E402
 
 Z = 1.96
@@ -214,6 +216,39 @@ def main() -> None:
     print("\n== heavy_fin out-of-domain conservatism (general news) ==")
     print(f"  neutral-pred on borderline: {np.mean(methods_n['heavy_fin'] == 1):.4f}")
     print(f"  neutral-pred on clear:      {np.mean(methods_c['heavy_fin'] == 1):.4f}")
+
+    print("\n== routing-only threshold sweep (label band held fixed at 0.1) ==")
+    yt = np.array([int(r["true"]) for r in clear])
+    for name, col in (("cascade_fpb_gen", "cheap_fpb_v"), ("cascade_news_gen", "cheap_news_v")):
+        best = None
+        frontier = []
+        for ct in (0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0):
+            code, tiers = cascade_predict(
+                _val(clear, col), _val(clear, "heavy_gen_v"), _val(clear, "vader_v"),
+                None, threshold=ct, band=0.1,
+            )
+            acc = float((code == yt).mean())
+            hs = float(np.mean([t == "heavy" for t in tiers]))
+            frontier.append((ct, acc, hs))
+            if best is None or acc > best[1]:
+                best = (ct, acc, hs)
+        print(f"  {name}: best acc {best[1]:.4f} at ct={best[0]} "
+              f"(heavy share {best[2]:.3f}); frontier: " +
+              ", ".join(f"ct={ct}:{acc:.3f}/{hs:.2f}" for ct, acc, hs in frontier))
+
+    fbt = np.array([int(r["true"]) for r in fc])
+    best = None
+    for ct in (0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0):
+        code, tiers = cascade_predict(
+            _val(fc, "cheap_v"), _val(fc, "heavy_v"), _val(fc, "vader_v"),
+            None, threshold=ct, band=0.1,
+        )
+        acc = float((code == fbt).mean())
+        hs = float(np.mean([t == "heavy" for t in tiers]))
+        if best is None or acc > best[1]:
+            best = (ct, acc, hs)
+    print(f"  FPB cascade: best acc {best[1]:.4f} at ct={best[0]} "
+          f"(heavy share {best[2]:.3f}) = heavy-only exactly (0.9558)")
 
 
 if __name__ == "__main__":

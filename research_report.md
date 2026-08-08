@@ -310,22 +310,29 @@ Two findings (significance = exact two-sided McNemar on the paired sentences):
    McNemar p ≈ 8×10⁻⁷); the FPB-cheap
    cascade (0.5975) is numerically higher but
    not significant (p = 0.02, above the 0.01 multiple-comparison threshold), and the
-   two cascade variants do not differ reliably at the pre-specified α = 0.01 level
+   two cascade variants do not differ reliably at the corrected α = 0.01 level
    (p = 0.049; 95% bootstrap CI on the difference [+0.2, +4.2] points is marginal). The
    cheap tier absorbs 24.3% of calls (n = 158, CI [21.1, 27.7]) at 91.8% accuracy,
-   and the threshold-sweep best (0.699) is an in-sample grid maximum, not a
-   held-out estimate. On the borderline set (n = 416) the cascade is *not* a
+   and a routing-only threshold sweep (band held fixed at 0.1) reaches 0.654 at a
+   53% heavy share (0.647 for the FPB-cheap variant) — an in-sample grid maximum,
+   not a held-out estimate; the label band is not swept because varying it is
+   confounded with routing (the earlier 0.699 band-varying maximum was that
+   artifact). On the borderline set (n = 416) the cascade is *not* a
    false-polarity reducer out of domain — versus its cheap tier the rate is flat
    (p = 1.0 / 0.25) and versus heavy-only it is slightly but significantly above
-   (p ≈ 2×10⁻⁴ / <10⁻⁴). Power caveat: at n = 416 a paired test at α = 0.01 / 80%
-    power resolves only ~7-point differences, so those null gaps mean
-    "indistinguishable here", not "equal"; the significant worse-than-heavy gaps rest
-    on 13/0 and 17/0 one-directional discordant pairs. Paired tests resolve a
-    staircase: keyword is significantly below heavy_fin (p ≈ 7×10⁻⁷), heavy_fin
-    below heavy_gen (p ≈ 2×10⁻³), heavy_gen below the cascades (13/0 and 17/0
-    discordant pairs), and cheap_fpb below VADER (p ≈ 4×10⁻³); the central plateau
-    (heavy_gen through the cheap tiers, 23–31%) is not otherwise resolvable at
-    n = 416 (pairwise p ≥ 0.25). Keyword's low 5.3% is bought
+   (p ≈ 2×10⁻⁴ / <10⁻⁴). Power caveat: the resolvable difference is
+   comparison-specific (≈ 2.8·√m/n points for m discordant pairs — ~7 points for
+   the cascade-vs-cheap comparisons but only ~2.4–2.8 points for the
+   cascade-vs-heavy comparisons), so those null gaps mean "indistinguishable
+   here", not "equal"; the significant worse-than-heavy gaps rest on 13/0 and
+   17/0 one-directional discordant pairs. Paired tests resolve a staircase:
+   keyword is significantly below heavy_fin (p ≈ 7×10⁻⁷), heavy_fin below
+   heavy_gen (p ≈ 2×10⁻³), heavy_gen below the cascades (13/0 and 17/0 one-directional
+   discordant pairs), and cheap_fpb below VADER (p ≈ 4×10⁻³); the
+   cascade-vs-cheap-tier steps (0.2–3.1 points, below the ~7-point resolution;
+   p = 1.0 / 0.86 / 0.25) are not supported, so within the 23–31% central
+   plateau the cascade and its own cheap tier are indistinguishable in this
+   sample. Keyword's low 5.3% is bought
     by predicting neutral on 90.5% of the clear set, and part of heavy_fin's 15.4% is
     the same out-of-domain conservatism (84.6% neutral on the borderline sentences) —
     in contrast to the finance borderline set (n = 2,879),

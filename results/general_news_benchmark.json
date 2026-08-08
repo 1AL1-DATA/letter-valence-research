@@ -470,65 +470,65 @@
     {
       "cascade": "cascade_news_gen",
       "cheap_threshold": 0.4,
-      "band": 0.05,
-      "accuracy": 0.6989,
+      "band": 0.1,
+      "accuracy": 0.6544,
       "heavy_share": 0.53
-    },
-    {
-      "cascade": "cascade_news_gen",
-      "cheap_threshold": 0.5,
-      "band": 0.05,
-      "accuracy": 0.6851,
-      "heavy_share": 0.6359
     },
     {
       "cascade": "cascade_fpb_gen",
       "cheap_threshold": 0.4,
-      "band": 0.05,
-      "accuracy": 0.6836,
+      "band": 0.1,
+      "accuracy": 0.6467,
       "heavy_share": 0.576
     },
     {
       "cascade": "cascade_news_gen",
+      "cheap_threshold": 0.5,
+      "band": 0.1,
+      "accuracy": 0.6329,
+      "heavy_share": 0.6359
+    },
+    {
+      "cascade": "cascade_news_gen",
       "cheap_threshold": 0.6,
-      "band": 0.05,
-      "accuracy": 0.6743,
+      "band": 0.1,
+      "accuracy": 0.619,
       "heavy_share": 0.7573
     },
     {
       "cascade": "cascade_fpb_gen",
       "cheap_threshold": 0.5,
-      "band": 0.05,
-      "accuracy": 0.6621,
+      "band": 0.1,
+      "accuracy": 0.6114,
       "heavy_share": 0.6974
-    },
-    {
-      "cascade": "cascade_fpb_gen",
-      "cheap_threshold": 0.6,
-      "band": 0.05,
-      "accuracy": 0.659,
-      "heavy_share": 0.8018
     },
     {
       "cascade": "cascade_news_gen",
       "cheap_threshold": 0.7,
-      "band": 0.05,
-      "accuracy": 0.659,
+      "band": 0.1,
+      "accuracy": 0.5991,
       "heavy_share": 0.8664
     },
     {
-      "cascade": "cascade_news_gen",
-      "cheap_threshold": 0.4,
+      "cascade": "cascade_fpb_gen",
+      "cheap_threshold": 0.6,
       "band": 0.1,
-      "accuracy": 0.6544,
-      "heavy_share": 0.53
+      "accuracy": 0.5975,
+      "heavy_share": 0.8018
+    },
+    {
+      "cascade": "cascade_fpb_gen",
+      "cheap_threshold": 0.7,
+      "band": 0.1,
+      "accuracy": 0.5868,
+      "heavy_share": 0.9094
     }
   ],
   "threshold_sweep_best": {
     "cascade": "cascade_news_gen",
     "cheap_threshold": 0.4,
-    "band": 0.05,
-    "accuracy": 0.6989,
+    "band": 0.1,
+    "accuracy": 0.6544,
     "heavy_share": 0.53
   },
   "borderline_set": {
@@ -602,5 +602,6 @@
       "pred_positive": 0.007211538461538462,
       "false_polarity_rate": 0.0529
     }
-  }
+  },
+  "threshold_sweep_note": "Band held fixed at LABEL_BAND=0.1 (routing-only sweep). A band-varying sweep confounds routing with the label band: a narrower band raises accuracy on the clear-only set trivially. The band-varying maximum (0.699 general / 0.9583 FPB) was removed as an artifact."
 }
