@@ -61,7 +61,7 @@ INDEX_HTML = """<!doctype html>
 </header>
 <main>
   <div class="card">
-    <textarea id="text" placeholder="Paste a financial news headline or paragraph here...">The company announced record profits and strong growth this quarter.</textarea>
+    <textarea id="text" placeholder="Paste a financial news headline or paragraph here...">Berkshire Hathaway shares rose on Monday to their highest level since Warren Buffett announced his departure as chief executive in May 2025, after his successor Greg Abel began spending the conglomerate's huge cash pile and financial results topped analysts' expectations.</textarea>
     <div class="row">
       <button id="run" onclick="classify()">Analyze sentiment</button>
       <span id="note" style="color:#6b7280;font-size:13px;"></span>
