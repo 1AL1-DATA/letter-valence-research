@@ -13,6 +13,7 @@ if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
 from fastapi import FastAPI, HTTPException  # noqa: E402
+from fastapi.responses import HTMLResponse  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 
 from src.classify import classify, vader_score  # noqa: E402
@@ -160,7 +161,7 @@ class ClassifyResponse(BaseModel):
     top_features: list[TopFeature]
 
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 async def index() -> str:
     return INDEX_HTML
 
