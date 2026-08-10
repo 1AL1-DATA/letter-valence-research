@@ -16,6 +16,7 @@ from fastapi import FastAPI, HTTPException  # noqa: E402
 from fastapi.responses import HTMLResponse  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 
+from api.cheap_tier import predict as cheap_predict  # noqa: E402
 from src.classify import classify, vader_score  # noqa: E402
 
 app = FastAPI(title="Letter Valence Research", version="1.0.0")
@@ -69,6 +70,13 @@ INDEX_HTML = """<!doctype html>
   </div>
 
   <div id="result" class="card">
+    <div style="font-weight:700;font-size:16px;margin-bottom:.4rem;">Word-level model (TF-IDF + VADER + keywords)</div>
+    <div id="cheap-verdict" class="label" style="font-size:1.15rem;"></div>
+    <div id="cheap-detail" style="font-size:13px;color:#6b7280;margin-top:.2rem;"></div>
+
+    <hr style="border:none;border-top:1px solid #e5e7eb;margin:1.1rem 0;">
+
+    <div style="font-weight:700;font-size:16px;margin-bottom:.4rem;">Letter-feature model (RandomForest)</div>
     <div id="verdict" class="label"></div>
     <div style="margin-top:.9rem;font-size:14px;color:#374151;">
       <div>Positive</div>
@@ -90,9 +98,11 @@ INDEX_HTML = """<!doctype html>
   </div>
 
   <p style="color:#6b7280;font-size:13px;line-height:1.6;">
-    Letter-feature model: <code>letter_sentiment_rf.pkl</code> (RandomForest, 272-dim
-    mean/max/min/std aggregation). VADER is shown as an independent lexical baseline.
-    Source: <a href="https://github.com/1AL1-DATA/letter-valence-research">github.com/1AL1-DATA/letter-valence-research</a>
+    Word-level model: TF-IDF (1-2 grams) + VADER + keyword lexicons through a 3-class logistic
+    regression, the cascade's cheap tier. Letter model: <code>letter_sentiment_rf.pkl</code>
+    (RandomForest, 272-dim mean/max/min/std aggregation). VADER is shown as an independent
+    lexical baseline. Source:
+    <a href="https://github.com/1AL1-DATA/letter-valence-research">github.com/1AL1-DATA/letter-valence-research</a>
   </p>
 </main>
 <script>
@@ -116,6 +126,15 @@ async function classify() {
     verdict.className = 'label ' + d.label;
     document.getElementById('bar-pos').style.width = Math.round(d.proba.positive * 100) + '%';
     document.getElementById('bar-neg').style.width = Math.round(d.proba.negative * 100) + '%';
+
+    const cv = document.getElementById('cheap-verdict');
+    cv.textContent = d.cheap.label.toUpperCase() + '  (valence ' + d.cheap.valence.toFixed(3) + ')';
+    cv.className = 'label ' + d.cheap.label;
+    const cd = document.getElementById('cheap-detail');
+    cd.textContent = 'P(pos) ' + d.cheap.proba.positive.toFixed(3) +
+      '  |  P(neu) ' + d.cheap.proba.neutral.toFixed(3) +
+      '  |  P(neg) ' + d.cheap.proba.negative.toFixed(3) +
+      '  |  ' + (d.cheap.decided ? 'decides at |v|≥0.6' : 'below |v|≥0.6 — falls through');
 
     const vt = document.getElementById('vader');
     vt.innerHTML = '<tr><th>Compound</th><td>' + d.vader.compound.toFixed(3) + '</td></tr>' +
@@ -150,6 +169,14 @@ class TopFeature(BaseModel):
     value: float
 
 
+class CheapResult(BaseModel):
+    label: str
+    valence: float
+    score: float
+    proba: dict[str, float]
+    decided: bool
+
+
 class ClassifyResponse(BaseModel):
     text: str
     n_words: int
@@ -159,6 +186,7 @@ class ClassifyResponse(BaseModel):
     confidence: float
     vader: dict
     top_features: list[TopFeature]
+    cheap: CheapResult
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -179,6 +207,7 @@ async def classify_endpoint(req: ClassifyRequest) -> ClassifyResponse:
     try:
         r = classify(text, return_proba=True, return_features=True)
         v = vader_score(text)
+        c = cheap_predict(text)
     except Exception as exc:  # model load / prediction failure
         raise HTTPException(status_code=500, detail=f"Classification failed: {exc}") from exc
     top_features = [TopFeature(name=name, value=float(value)) for name, value in r.get("top_features", [])]
@@ -191,4 +220,5 @@ async def classify_endpoint(req: ClassifyRequest) -> ClassifyResponse:
         confidence=float(r["confidence"]),
         vader=v,
         top_features=top_features,
+        cheap=CheapResult(**c),
     )
