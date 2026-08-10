@@ -1,6 +1,10 @@
 # letter-valence-research
-Test is @ https://letter-valence-research-git-main-name-a0b0.vercel.app/ {It tends to missclassify on one sentence strings. Try an actual article snippet for optimal results}
+
 **Can the letters of an English word predict its sentiment? An empirical study of 68 letter-derived numerical features across 13,914 words and 1,967 financial sentences.**
+
+Test @ https://letter-valence-research-git-main-name-a0b0.vercel.app/ 
+
+**It tends to missclassify on one sentence strings. Try an actual article snippet for optimal results**
 
 ## Can the letters of a word predict its sentiment?
 
