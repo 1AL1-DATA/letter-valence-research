@@ -4,7 +4,7 @@
 
 Test @ https://letter-valence-research-git-main-name-a0b0.vercel.app/ 
 
-**It tends to missclassify on one sentence strings. Try an actual article snippet for optimal results**
+**It tends to missclassify on one sentence strings. Try an actual article snippet for more optimal results.**
 
 ## Can the letters of a word predict its sentiment?
 
