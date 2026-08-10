@@ -44,8 +44,16 @@ INDEX_HTML = """<!doctype html>
   #result.show { display:block; }
   .label { font-size:1.4rem; font-weight:bold; }
   .pos { color:var(--ok); } .neg { color:var(--bad); }
-  .bar { background:#e5e7eb; border-radius:6px; height:14px; overflow:hidden; margin-top:.35rem; }
-  .bar > div { height:100%; }
+  .meter { position:relative; height:18px; border-radius:9px; background:linear-gradient(90deg,#dc2626 0%,#fca5a5 26%,#f3f4f6 50%,#86efac 74%,#16a34a 100%); box-shadow:inset 0 1px 2px rgba(0,0,0,.18); margin:.8rem 0 .15rem; }
+  .meter .mid { position:absolute; left:50%; top:0; bottom:0; width:2px; background:rgba(0,0,0,.25); }
+  .meter .pin { position:absolute; top:-5px; width:5px; height:28px; background:#111827; border-radius:3px; transform:translateX(-50%); box-shadow:0 1px 3px rgba(0,0,0,.35); transition:left .5s ease; }
+  .scale { display:flex; justify-content:space-between; font:12px system-ui; color:#6b7280; }
+  .hist { display:flex; align-items:flex-end; justify-content:space-around; height:130px; margin-top:.6rem; padding:0 .25rem; }
+  .hcol { display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:2px; width:100%; }
+  .hbar { width:100%; max-width:64px; height:0; transition:height .5s ease; border-radius:5px 5px 0 0; }
+  .hbar.neg { background:var(--bad); } .hbar.pos { background:var(--ok); } .hbar.neu { background:#9ca3af; }
+  .hval { font:700 14px system-ui; color:#1d2433; }
+  .hlabel { font:600 12px system-ui; color:#6b7280; }
   .grid { display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; margin-top:1rem; }
   @media (max-width:560px){ .grid { grid-template-columns:1fr; } }
   table { width:100%; border-collapse:collapse; font:13px system-ui; }
@@ -70,19 +78,25 @@ INDEX_HTML = """<!doctype html>
   </div>
 
   <div id="result" class="card">
-    <div style="font-weight:700;font-size:16px;margin-bottom:.4rem;">Word-level model (TF-IDF + VADER + keywords)</div>
-    <div id="cheap-verdict" class="label" style="font-size:1.15rem;"></div>
-    <div id="cheap-detail" style="font-size:13px;color:#6b7280;margin-top:.2rem;"></div>
+    <div style="font-weight:700;font-size:16px;margin-bottom:.4rem;">Word-level model <span style="font-weight:400;font-size:13px;color:#6b7280;">(TF-IDF + VADER + keywords)</span></div>
+    <div id="cheap-verdict" class="label" style="font-size:1.2rem;"></div>
+    <div class="meter"><div class="mid"></div><div class="pin" id="cheap-pin" style="left:50%"></div></div>
+    <div class="scale"><span>negative</span><span>neutral</span><span>positive</span></div>
+    <div class="hist">
+      <div class="hcol"><div class="hbar neg" id="cn"></div><div class="hval" id="cnv"></div><div class="hlabel">Negative</div></div>
+      <div class="hcol"><div class="hbar neu" id="cu"></div><div class="hval" id="cuv"></div><div class="hlabel">Neutral</div></div>
+      <div class="hcol"><div class="hbar pos" id="cp"></div><div class="hval" id="cpv"></div><div class="hlabel">Positive</div></div>
+    </div>
 
     <hr style="border:none;border-top:1px solid #e5e7eb;margin:1.1rem 0;">
 
-    <div style="font-weight:700;font-size:16px;margin-bottom:.4rem;">Letter-feature model (RandomForest)</div>
+    <div style="font-weight:700;font-size:16px;margin-bottom:.4rem;">Letter-feature model <span style="font-weight:400;font-size:13px;color:#6b7280;">(RandomForest)</span></div>
     <div id="verdict" class="label"></div>
-    <div style="margin-top:.9rem;font-size:14px;color:#374151;">
-      <div>Positive</div>
-      <div class="bar"><div id="bar-pos" style="background:var(--ok);width:50%;"></div></div>
-      <div style="margin-top:.6rem;">Negative</div>
-      <div class="bar"><div id="bar-neg" style="background:var(--bad);width:50%;"></div></div>
+    <div class="meter"><div class="mid"></div><div class="pin" id="letter-pin" style="left:50%"></div></div>
+    <div class="scale"><span>negative</span><span>neutral</span><span>positive</span></div>
+    <div class="hist">
+      <div class="hcol"><div class="hbar neg" id="ln"></div><div class="hval" id="lnv"></div><div class="hlabel">Negative</div></div>
+      <div class="hcol"><div class="hbar pos" id="lp"></div><div class="hval" id="lpv"></div><div class="hlabel">Positive</div></div>
     </div>
 
     <div class="grid">
@@ -106,6 +120,14 @@ INDEX_HTML = """<!doctype html>
   </p>
 </main>
 <script>
+function setHist(barId, valId, p) {
+  document.getElementById(barId).style.height = Math.round(p * 80) + 'px';
+  document.getElementById(valId).textContent = Math.round(p * 100) + '%';
+}
+function setPin(id, valence) {
+  document.getElementById(id).style.left = ((valence + 1) / 2 * 100) + '%';
+}
+
 async function classify() {
   const btn = document.getElementById('run');
   const note = document.getElementById('note');
@@ -121,20 +143,25 @@ async function classify() {
     const d = await r.json();
     if (d.error) throw new Error(d.error);
 
+    // ---- letter-feature model ----
     const verdict = document.getElementById('verdict');
     verdict.textContent = d.label.toUpperCase() + '  (' + Math.round(d.confidence * 100) + '% confidence)';
     verdict.className = 'label ' + d.label;
-    document.getElementById('bar-pos').style.width = Math.round(d.proba.positive * 100) + '%';
-    document.getElementById('bar-neg').style.width = Math.round(d.proba.negative * 100) + '%';
+    const lv = d.proba.positive - d.proba.negative;
+    setPin('letter-pin', lv);
+    setHist('ln', 'lnv', d.proba.negative);
+    setHist('lp', 'lpv', d.proba.positive);
 
+    // ---- word-level (TF-IDF + VADER) model ----
     const cv = document.getElementById('cheap-verdict');
-    cv.textContent = d.cheap.label.toUpperCase() + '  (valence ' + d.cheap.valence.toFixed(3) + ')';
+    cv.textContent = d.cheap.label.toUpperCase() +
+      '  (valence ' + d.cheap.valence.toFixed(3) + ')  ·  ' +
+      (d.cheap.decided ? 'decides at |v|≥0.6' : 'below |v|≥0.6 — falls through');
     cv.className = 'label ' + d.cheap.label;
-    const cd = document.getElementById('cheap-detail');
-    cd.textContent = 'P(pos) ' + d.cheap.proba.positive.toFixed(3) +
-      '  |  P(neu) ' + d.cheap.proba.neutral.toFixed(3) +
-      '  |  P(neg) ' + d.cheap.proba.negative.toFixed(3) +
-      '  |  ' + (d.cheap.decided ? 'decides at |v|≥0.6' : 'below |v|≥0.6 — falls through');
+    setPin('cheap-pin', d.cheap.valence);
+    setHist('cn', 'cnv', d.cheap.proba.negative);
+    setHist('cu', 'cuv', d.cheap.proba.neutral);
+    setHist('cp', 'cpv', d.cheap.proba.positive);
 
     const vt = document.getElementById('vader');
     vt.innerHTML = '<tr><th>Compound</th><td>' + d.vader.compound.toFixed(3) + '</td></tr>' +
