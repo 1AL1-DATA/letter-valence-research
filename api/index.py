@@ -17,10 +17,10 @@ from fastapi import FastAPI, HTTPException  # noqa: E402
 from fastapi.responses import HTMLResponse  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 
+from api.attribution import top_features as attribution_top_features  # noqa: E402
 from api.cheap_tier import NEG_WORDS as CHEAP_KEYWORDS_NEG  # noqa: E402
 from api.cheap_tier import POS_WORDS as CHEAP_KEYWORDS_POS  # noqa: E402
 from api.cheap_tier import predict as cheap_predict  # noqa: E402
-from api.shap_features import top_features as shap_top_features  # noqa: E402
 from src.classify import classify, vader_score  # noqa: E402
 
 app = FastAPI(title="Letter Valence Research", version="1.0.0")
@@ -116,8 +116,8 @@ INDEX_HTML = """<!doctype html>
     </div>
 
     <div class="shap">
-      <div class="shap-title">Why this prediction — SHAP attribution</div>
-      <div class="shap-note">Signed per-word contribution of each letter feature (green = pushes positive, red = pushes negative).</div>
+      <div class="shap-title">Why this prediction — feature attribution</div>
+      <div class="shap-note">Signed change in P(positive) when each letter feature is reset to its mean (green = pushes positive, red = pushes negative).</div>
       <div id="shap"></div>
     </div>
   </div>
@@ -205,10 +205,10 @@ async function classify() {
     document.getElementById('vader-chips').innerHTML =
       chips.length ? chips.join('') : '<span style="font-size:12px;color:#9ca3af;">none from the lexicon</span>';
 
-    // ---- SHAP attribution for the letter model ----
-    const maxAbs = Math.max.apply(null, (d.shap_features || []).map(function (f) { return Math.abs(f.value); }).concat([1e-9]));
+    // ---- attribution for the letter model ----
+    const maxAbs = Math.max.apply(null, (d.attribution || []).map(function (f) { return Math.abs(f.value); }).concat([1e-9]));
     const ft = document.getElementById('shap');
-    ft.innerHTML = (d.shap_features || []).map(function (f) {
+    ft.innerHTML = (d.attribution || []).map(function (f) {
       const pct = Math.max(4, Math.round(Math.abs(f.value) / maxAbs * 100));
       const pos = f.value >= 0;
       const align = pos ? '' : ' justify-content:flex-end;';
@@ -261,7 +261,7 @@ class ClassifyResponse(BaseModel):
     confidence: float
     vader: dict
     top_features: list[TopFeature]
-    shap_features: list[TopFeature]
+    attribution: list[TopFeature]
     cheap: CheapResult
 
 
@@ -290,7 +290,7 @@ async def classify_endpoint(req: ClassifyRequest) -> ClassifyResponse:
             set(re.findall(r"[a-z']+", text.lower())) & CHEAP_KEYWORDS_NEG
         )
         c = cheap_predict(text)
-        sf = shap_top_features(text)
+        att = attribution_top_features(text)
     except Exception as exc:  # model load / prediction failure
         raise HTTPException(status_code=500, detail=f"Classification failed: {exc}") from exc
     top_features = [TopFeature(name=name, value=float(value)) for name, value in r.get("top_features", [])]
@@ -303,6 +303,6 @@ async def classify_endpoint(req: ClassifyRequest) -> ClassifyResponse:
         confidence=float(r["confidence"]),
         vader=v,
         top_features=top_features,
-        shap_features=[TopFeature(**f) for f in sf],
+        attribution=[TopFeature(**f) for f in att],
         cheap=CheapResult(**c),
     )

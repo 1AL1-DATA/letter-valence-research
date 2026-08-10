@@ -15,7 +15,6 @@ dependencies = [
     "tqdm>=4.65",
     "fastapi>=0.110",
     "uvicorn>=0.29",
-    "shap>=0.45",
 ]
 
 [tool.vercel]
