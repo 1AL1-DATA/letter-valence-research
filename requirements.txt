@@ -24,6 +24,6 @@ pytest>=7.4
 # Progress bar
 tqdm>=4.65
 
-# Optional: FastAPI for the HTTP endpoint (if you want an HTTP API)
-# fastapi>=0.100
-# uvicorn>=0.23
+# Optional: FastAPI for the HTTP endpoint (used by the Vercel deployment)
+fastapi>=0.110
+uvicorn>=0.29

@@ -13,7 +13,12 @@ dependencies = [
     "matplotlib>=3.7",
     "seaborn>=0.12",
     "tqdm>=4.65",
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
 ]
+
+[tool.vercel]
+entrypoint = "api/index.py"
 
 [project.optional-dependencies]
 full = [
