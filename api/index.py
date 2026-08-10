@@ -5,6 +5,7 @@ Run locally with:  uvicorn api.index:app --reload
 """
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -16,7 +17,10 @@ from fastapi import FastAPI, HTTPException  # noqa: E402
 from fastapi.responses import HTMLResponse  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 
+from api.cheap_tier import NEG_WORDS as CHEAP_KEYWORDS_NEG  # noqa: E402
+from api.cheap_tier import POS_WORDS as CHEAP_KEYWORDS_POS  # noqa: E402
 from api.cheap_tier import predict as cheap_predict  # noqa: E402
+from api.shap_features import top_features as shap_top_features  # noqa: E402
 from src.classify import classify, vader_score  # noqa: E402
 
 app = FastAPI(title="Letter Valence Research", version="1.0.0")
@@ -54,6 +58,18 @@ INDEX_HTML = """<!doctype html>
   .hbar.neg { background:var(--bad); } .hbar.pos { background:var(--ok); } .hbar.neu { background:#9ca3af; }
   .hval { font:700 14px system-ui; color:#1d2433; }
   .hlabel { font:600 12px system-ui; color:#6b7280; }
+  .shap { margin-top:1rem; }
+  .shap-title { font-weight:600; margin-bottom:.4rem; font-size:15px; }
+  .shap-note { font-size:12px; color:#6b7280; margin-bottom:.5rem; }
+  .shap-row { display:flex; align-items:center; gap:.6rem; font:13px system-ui; margin:.35rem 0; }
+  .shap-name { width:180px; text-align:right; color:#374151; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .shap-track { flex:1; display:flex; align-items:center; }
+  .shap-bar { height:12px; border-radius:3px; min-width:3px; transition:width .5s ease; }
+  .shap-bar.pos { background:var(--ok); } .shap-bar.neg { background:var(--bad); }
+  .shap-val { width:72px; font-variant-numeric:tabular-nums; color:#6b7280; }
+  .chip { display:inline-block; padding:.15rem .5rem; margin:.15rem .2rem 0 0; border-radius:999px; font:12px system-ui; }
+  .chip.pos { background:#dcfce7; color:#15803d; } .chip.neg { background:#fee2e2; color:#b91c1c; }
+  .chips-label { font-size:12px; color:#6b7280; margin-top:.5rem; }
   .grid { display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; margin-top:1rem; }
   @media (max-width:560px){ .grid { grid-template-columns:1fr; } }
   table { width:100%; border-collapse:collapse; font:13px system-ui; }
@@ -99,16 +115,25 @@ INDEX_HTML = """<!doctype html>
       <div class="hcol"><div class="hbar pos" id="lp"></div><div class="hval" id="lpv"></div><div class="hlabel">Positive</div></div>
     </div>
 
-    <div class="grid">
-      <div>
-        <div style="font-weight:600;margin-bottom:.5rem;font-size:15px;">VADER baseline</div>
-        <table id="vader"></table>
-      </div>
-      <div>
-        <div style="font-weight:600;margin-bottom:.5rem;font-size:15px;">Top letter features</div>
-        <table id="features"></table>
-      </div>
+    <div class="shap">
+      <div class="shap-title">Why this prediction — SHAP attribution</div>
+      <div class="shap-note">Signed per-word contribution of each letter feature (green = pushes positive, red = pushes negative).</div>
+      <div id="shap"></div>
     </div>
+  </div>
+
+  <div id="vader-card" class="card" style="display:none;">
+    <div style="font-weight:700;font-size:16px;margin-bottom:.4rem;">VADER baseline <span style="font-weight:400;font-size:13px;color:#6b7280;">(lexical rule-based)</span></div>
+    <div id="vader-verdict" class="label" style="font-size:1.2rem;"></div>
+    <div class="meter"><div class="mid"></div><div class="pin" id="vader-pin" style="left:50%"></div></div>
+    <div class="scale"><span>negative</span><span>neutral</span><span>positive</span></div>
+    <div class="hist">
+      <div class="hcol"><div class="hbar neg" id="vn"></div><div class="hval" id="vnv"></div><div class="hlabel">Negative</div></div>
+      <div class="hcol"><div class="hbar neu" id="vu"></div><div class="hval" id="vuv"></div><div class="hlabel">Neutral</div></div>
+      <div class="hcol"><div class="hbar pos" id="vp"></div><div class="hval" id="vpv"></div><div class="hlabel">Positive</div></div>
+    </div>
+    <div class="chips-label">Lexicon words matched:</div>
+    <div id="vader-chips"></div>
   </div>
 
   <p style="color:#6b7280;font-size:13px;line-height:1.6;">
@@ -163,14 +188,37 @@ async function classify() {
     setHist('cu', 'cuv', d.cheap.proba.neutral);
     setHist('cp', 'cpv', d.cheap.proba.positive);
 
-    const vt = document.getElementById('vader');
-    vt.innerHTML = '<tr><th>Compound</th><td>' + d.vader.compound.toFixed(3) + '</td></tr>' +
-      '<tr><th>Label</th><td>' + d.vader.label_default + '</td></tr>' +
-      '<tr><th>pos / neu / neg</th><td>' + d.vader.pos.toFixed(2) + ' / ' + d.vader.neu.toFixed(2) + ' / ' + d.vader.neg.toFixed(2) + '</td></tr>';
+    // ---- VADER baseline ----
+    document.getElementById('vader-card').style.display = 'block';
+    const vv = document.getElementById('vader-verdict');
+    vv.textContent = d.vader.label_default.toUpperCase() +
+      '  (compound ' + d.vader.compound.toFixed(3) + ')';
+    vv.className = 'label ' + d.vader.label_default;
+    setPin('vader-pin', Math.max(-1, Math.min(1, d.vader.compound)));
+    setHist('vn', 'vnv', d.vader.neg);
+    setHist('vu', 'vuv', d.vader.neu);
+    setHist('vp', 'vpv', d.vader.pos);
 
-    const ft = document.getElementById('features');
-    ft.innerHTML = (d.top_features || []).map(function (f) {
-      return '<tr><td>' + f.name + '</td><td style="font-variant-numeric:tabular-nums">' + f.value.toFixed(3) + '</td></tr>';
+    const chips = [];
+    (d.vader.matched_pos || []).forEach(function (w) { chips.push('<span class="chip pos">' + w + '</span>'); });
+    (d.vader.matched_neg || []).forEach(function (w) { chips.push('<span class="chip neg">' + w + '</span>'); });
+    document.getElementById('vader-chips').innerHTML =
+      chips.length ? chips.join('') : '<span style="font-size:12px;color:#9ca3af;">none from the lexicon</span>';
+
+    // ---- SHAP attribution for the letter model ----
+    const maxAbs = Math.max.apply(null, (d.shap_features || []).map(function (f) { return Math.abs(f.value); }).concat([1e-9]));
+    const ft = document.getElementById('shap');
+    ft.innerHTML = (d.shap_features || []).map(function (f) {
+      const pct = Math.max(4, Math.round(Math.abs(f.value) / maxAbs * 100));
+      const pos = f.value >= 0;
+      const align = pos ? '' : ' justify-content:flex-end;';
+      return '<div class="shap-row">' +
+        '<div class="shap-name" title="' + f.name + '">' + f.name + '</div>' +
+        '<div class="shap-track" style="' + align + '">' +
+          '<div class="shap-bar ' + (pos ? 'pos' : 'neg') + '" style="width:' + pct + '%"></div>' +
+        '</div>' +
+        '<div class="shap-val">' + (pos ? '+' : '') + f.value.toFixed(4) + '</div>' +
+      '</div>';
     }).join('');
 
     res.className = 'card show';
@@ -213,6 +261,7 @@ class ClassifyResponse(BaseModel):
     confidence: float
     vader: dict
     top_features: list[TopFeature]
+    shap_features: list[TopFeature]
     cheap: CheapResult
 
 
@@ -234,7 +283,14 @@ async def classify_endpoint(req: ClassifyRequest) -> ClassifyResponse:
     try:
         r = classify(text, return_proba=True, return_features=True)
         v = vader_score(text)
+        v["matched_pos"] = sorted(
+            set(re.findall(r"[a-z']+", text.lower())) & CHEAP_KEYWORDS_POS
+        )
+        v["matched_neg"] = sorted(
+            set(re.findall(r"[a-z']+", text.lower())) & CHEAP_KEYWORDS_NEG
+        )
         c = cheap_predict(text)
+        sf = shap_top_features(text)
     except Exception as exc:  # model load / prediction failure
         raise HTTPException(status_code=500, detail=f"Classification failed: {exc}") from exc
     top_features = [TopFeature(name=name, value=float(value)) for name, value in r.get("top_features", [])]
@@ -247,5 +303,6 @@ async def classify_endpoint(req: ClassifyRequest) -> ClassifyResponse:
         confidence=float(r["confidence"]),
         vader=v,
         top_features=top_features,
+        shap_features=[TopFeature(**f) for f in sf],
         cheap=CheapResult(**c),
     )

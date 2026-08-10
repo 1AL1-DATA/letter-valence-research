@@ -27,3 +27,6 @@ tqdm>=4.65
 # Optional: FastAPI for the HTTP endpoint (used by the Vercel deployment)
 fastapi>=0.110
 uvicorn>=0.29
+
+# SHAP attribution for the letter-feature model
+shap>=0.45
