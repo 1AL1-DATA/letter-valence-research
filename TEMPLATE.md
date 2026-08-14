@@ -1,6 +1,6 @@
 # Research artifact template
 
-> **What this is**: a documentation of the 5-layer artifact structure used by `/home/a/letter-valence-research/`, written so a future researcher (human or LLM agent) can apply the same structure to a new project without any prior context.
+> **What this is**: a documentation of the 5-layer artifact structure used by `letter-valence-research/`, written so a future researcher (human or LLM agent) can apply the same structure to a new project without any prior context.
 >
 > **Validated**: 2026-08-05 on the letter-valence-research project (68 letter-derived features, 0.7377 CV accuracy, 53 files, 15.7 MB, fully reproducible end-to-end).
 >
@@ -303,5 +303,5 @@ This is version 1.0.0 of the template, dated 2026-08-05.
 
 It was extracted from the letter-valence-research project. To see what a project adds on top of this template, compare:
 - This document (the generic structure)
-- `/home/a/letter-valence-research/` (a project that uses this structure)
+- `letter-valence-research/` (a project that uses this structure)
 - The diff between them shows the project-specific content: the headline result, the specific features, the specific datasets, the specific blog post narrative.

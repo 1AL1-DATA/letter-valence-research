@@ -1,8 +1,8 @@
 """Cross-domain generalisation benchmark for the 2-tier sentiment cascade.
 
 Run from the research repo root with the dashboard workspace venv:
-    cd /home/a/letter-valence-research
-    /home/a/esg-dashboard/.venv/bin/python -m src.benchmark_general
+    cd letter-valence-research
+    python -m src.benchmark_general
 
 Dataset
 -------
@@ -50,7 +50,7 @@ import pandas as pd
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
-DASHBOARD_SRC = Path(os.environ.get("ESG_DASHBOARD_SRC", "/home/a/esg-dashboard/src"))
+DASHBOARD_SRC = Path(os.environ.get("ESG_DASHBOARD_SRC", str(REPO)))
 sys.path.insert(0, str(DASHBOARD_SRC))
 
 from esg_dashboard.data.sentiment_engine import (  # noqa: E402

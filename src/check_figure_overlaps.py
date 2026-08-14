@@ -6,7 +6,7 @@ texts, annotations) for pairwise bounding-box collisions. Exits non-zero if any
 figure has an overlap above the threshold, so it can gate the pipeline.
 
 Run from the research repo root:
-    /home/a/esg-dashboard/.venv/bin/python -m src.check_figure_overlaps
+    python -m src.check_figure_overlaps
 
 Threshold note: a pair counts as an overlap when both axes overlap by more than
 2 px in each direction (boxes of ordinary neighbouring labels touch without

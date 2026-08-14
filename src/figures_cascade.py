@@ -11,7 +11,7 @@ Panels:
   D. Cascade tier routing + per-tier accuracy
 
 Run from the research repo root:
-    /home/a/esg-dashboard/.venv/bin/python -m src.figures_cascade
+    python -m src.figures_cascade
 """
 
 from __future__ import annotations

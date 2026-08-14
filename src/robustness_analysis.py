@@ -16,14 +16,15 @@ made in README / SUMMARY / METHODOLOGY / research_report / arxiv_paper:
   the 0.654 / 0.647 general best points and the FPB best = heavy-only result.
 
 Run:
-    cd /home/a/letter-valence-research
-    /home/a/esg-dashboard/.venv/bin/python -m src.robustness_analysis
+    cd letter-valence-research
+    python -m src.robustness_analysis
 """
 
 from __future__ import annotations
 
 import csv
 import math
+import os
 import random
 import sys
 from pathlib import Path
@@ -32,7 +33,7 @@ import numpy as np
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
-sys.path.insert(0, "/home/a/esg-dashboard/src")
+sys.path.insert(0, os.environ.get("ESG_DASHBOARD_SRC", str(REPO)))
 
 from src.benchmark_cascade import predict_from_v, cascade_predict  # noqa: E402
 from scipy.stats import binomtest  # noqa: E402

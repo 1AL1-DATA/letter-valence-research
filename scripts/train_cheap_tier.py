@@ -3,7 +3,7 @@
 Run from the repo root:
     python -m scripts.train_cheap_tier
 or
-    /home/a/.venv/bin/python -m scripts.train_cheap_tier
+    python -m scripts.train_cheap_tier
     (add PYTHONPATH=/tmp/.../vader if vaderSentiment is not installed)
 
 Saves the fitted vectorizer + model to models/cheap_tier.pkl, which the

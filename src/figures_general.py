@@ -11,7 +11,7 @@ Panels:
   D. Threshold sweep: accuracy vs heavy-tier share across cheap tiers
 
 Run from the research repo root:
-    /home/a/esg-dashboard/.venv/bin/python -m src.figures_general
+    python -m src.figures_general
 """
 
 from __future__ import annotations

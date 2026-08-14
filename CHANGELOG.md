@@ -126,7 +126,7 @@ All notable changes to this project are documented here. The format follows
   uninformative rather than merely weak. Was already in `research_report.md` and
   `results/family_ablation.csv`; now also in README bullet 3.
 - **README reproduction steps de-personalised.** Hardcoded
-  `/home/a/esg-dashboard/.venv/bin/python` paths replaced with plain
+  absolute venv paths replaced with plain
   `python -m src.*`; cascade steps now note they additionally require
   `torch` + `transformers` (not in `requirements.txt`).
 
