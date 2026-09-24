@@ -55,8 +55,12 @@ arxiv_paper.toc
 *.synctex.gz
 *.fls
 *.fdb_latexmk
-!arxiv_paper.pdf  # we DO want to commit the compiled PDF
 !docs/.gitkeep
+
+# Personal drafts — kept out of the repo (2026-09-25)
+linkedin_post.md
+arxiv_paper.tex
+arxiv_paper.pdf
 
 # Local-only artifacts
 *.log
