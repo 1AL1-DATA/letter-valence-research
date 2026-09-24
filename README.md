@@ -103,7 +103,8 @@ letter-valence-research/
 │   ├── letter_freqs.json      ← derived: letter unigram + bigram counts
 │   ├── words_alpha.txt         ← 370k-word English word list
 │   ├── Sentences_50Agree.txt  ← source for articles_binary.csv
-│   └── newsmtsc/              ← NewsMTSC train + devtest_rw JSONL (general news)
+│   ├── newsmtsc/              ← NewsMTSC train + devtest_rw JSONL (general news)
+│   └── cascade_test/          ← 240 live headlines + LLM-judge gold + results CSV
 ├── src/
 │   ├── __init__.py
 │   ├── features.py            ← 68 letter-derived features in 12 families
@@ -119,6 +120,9 @@ letter-valence-research/
 │   ├── benchmark_general.py   ← cross-domain cascade eval on general news
 │   ├── figures_cascade.py     ← 4-panel cascade figure
 │   ├── figures_general.py     ← 4-panel general-news cascade figure
+│   ├── figures_headline.py    ← 4-panel live-headline findings figure
+│   ├── cascade_eval.py        ← live-headline eval: gold labels, ensembles, band sweep
+│   ├── sentiment_engine/      ← shipped 2-tier engine + legacy letter engine (self-contained assets)
 │   ├── animate.py             ← 3D spectral waterfall + word-trajectory animations
 │   └── style.py               ← shared palette + matplotlib style
 ├── tests/
@@ -156,8 +160,13 @@ letter-valence-research/
 │   ├── shap_waterfall.png      ← SHAP waterfall: one pos + one neg example
 │   ├── cascade_sentiment_eval.png ← 2-tier cascade evaluation (4 panels)
 │   ├── general_news_eval.png  ← cross-domain cascade evaluation (4 panels)
+│   ├── headline_gold_findings.png ← live-headline evaluation vs gold (4 panels)
+│   ├── sentiment_cascade_funnel.png ← live-news cascade funnel (word tier vs heavy)
+│   ├── sentiment_cascade_valence_bands.png ← word tier vs legacy DFT bands
+│   ├── sentiment_cascade_examples.png ← per-example firings vs gold
 │   └── animations/            ← 3D spectral waterfall + word-trajectory MP4s
 ├── models/
+│   ├── cheap_tier.pkl         ← word-level cheap tier (TF-IDF + logreg, FPB-trained)
 │   └── letter_sentiment_rf.pkl   ← trained RF model (3.7 MB)
 ├── docs/
 │   └── architecture.md
@@ -316,6 +325,36 @@ its conclusion: the signal is real but lives in words, not letters.**
 > compute-savings conclusion are unaffected. See
 `src/benchmark_cascade.py`, `results/cascade_benchmark.json`, and
 `figures/cascade_sentiment_eval.png`.
+
+## Live-headline validation (2026-09-25)
+
+The evaluations above use FinancialPhraseBank/NewsMTSC *sentences*; production input
+is *headlines*. The shipped engine is now **ported into this repo**
+(`src/sentiment_engine/engine.py` — the 2-tier word cascade; the deprecated letter
+cascade rides along as `legacy_engine.py` for side-by-side evaluation) and was
+validated on **240 live Google News RSS headlines** (12 tickers, deduped) labelled by
+a single LLM judge — synthetic gold (92 neutral / 89 positive / 59 negative), one
+judge, no adjudication, so treat accuracy as indicative. Harness:
+`src/cascade_eval.py`; data + results in `data/cascade_test/`; regenerate the figure
+with `python -m src.figures_headline`.
+
+![Live-headline evaluation vs gold](figures/headline_gold_findings.png)
+
+- **Legacy letter tiers: 0 fires.** At the shipped 0.95 / 0.80 bands the DFT probe
+  and letter RF answer nothing on headlines (max |v| 0.933 / 0.720) — the dominance
+  result holds out-of-domain. Forced to answer, their label accuracy is 35.4% / 38.8%
+  against an always-neutral baseline of 38.3%: chance.
+- **The word tier has a real confidence gradient** (the letter tiers had none):
+  precision 51% → 76% → 84% as the band rises 0.2 → 0.4 → 0.5. The shipped band 0.6
+  gives **16 fires (6.7% coverage) at 81.2% precision**, 0 wrong on directional gold.
+  The FPB-benchmark 36.6% cheap share shrinks on headlines because the pkl is
+  FPB-trained — headline retraining would recover coverage.
+- **VADER** is 48.3% overall (keyword 51.2%) but bands cleanly too: 79% precision at
+  |compound| ≥ 0.6.
+- **Combinations pay off once members carry signal**: a 5-signal logistic stacker
+  (word, DFT, RF, VADER, keyword valences) under 5-fold CV reaches **58.3%** vs 51.2%
+  for the best single signal; the oracle ceiling (any-of-5 correct) is 80.4%. The
+  earlier 3-signal ensembles failed because the letter tiers were chance-level noise.
 
 ## Does the cascade generalise beyond finance? (NewsMTSC)
 
