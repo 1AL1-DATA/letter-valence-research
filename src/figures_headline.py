@@ -7,7 +7,8 @@ Panels:
   A. Single-signal accuracy vs gold (n = 240 headlines)
   B. Cheap-tier band sweep: precision vs coverage
   C. Ensemble ladder: best single -> valence average -> 5-signal CV stacker -> oracle
-  D. Fires at shipped bands: legacy letter tiers (0) vs word tier (16 @ 81.2%)
+  D. Fires at legacy bands (original 0.95/0.80 and recalibrated 0.30/0.10)
+     vs the shipped word-tier band
 
 Run from the research repo root:
     python -m src.figures_headline
@@ -85,13 +86,6 @@ def main() -> None:
             [label_from_v(df[c].to_numpy()) == gold for c in SIGNALS]).mean())),
     ]
 
-    # D — fires at shipped bands
-    legacy_dft = int((df["dft_v"].abs() >= 0.95).sum())
-    legacy_rf = int((df["rf_v"].abs() >= 0.80).sum())
-    word = int((np.abs(cv) >= CHEAP_THRESHOLD).sum())
-    word_prec = float((cheap_labels[np.abs(cv) >= CHEAP_THRESHOLD] ==
-                       gold[np.abs(cv) >= CHEAP_THRESHOLD]).mean())
-
     fig, axes = plt.subplots(2, 2, figsize=(13, 8.5))
     fig.suptitle("Live-headline evaluation — 240 headlines vs LLM-judge gold",
                  fontsize=15, fontweight="bold", color=PALETTE["black"], y=0.985)
@@ -108,8 +102,9 @@ def main() -> None:
             for k in names]
     ax.barh(names, vals, color=cols, edgecolor=PALETTE["prussian"], linewidth=0.6)
     ax.axvline(majority, color=PALETTE["prussian"], ls="--", lw=1.2)
-    ax.text(0.02, 1.04, f"dashed = always-neutral baseline {majority:.0%}",
-            transform=ax.transAxes, fontsize=8.5, color=PALETTE["prussian"])
+    ax.text(0.98, 1.04, f"dashed = always-neutral baseline {majority:.0%}",
+            transform=ax.transAxes, fontsize=8.5, color=PALETTE["prussian"],
+            ha="right")
     for i, v in enumerate(vals):
         ax.text(v + 0.012, i, f"{v:.1%}", va="center", fontsize=9.5,
                 fontweight="bold")
@@ -130,7 +125,7 @@ def main() -> None:
     ax.plot([ship[0]], [ship[1]], "o", ms=13, mfc="none",
             mec=PALETTE["orange"], mew=2.5)
     ax.annotate(f"shipped {CHEAP_THRESHOLD}", (ship[0], ship[1]),
-                textcoords="offset points", xytext=(-72, -18), fontsize=9,
+                textcoords="offset points", xytext=(14, -26), fontsize=9,
                 color=PALETTE["orange"], fontweight="bold")
     ax.set_ylim(min(pre) - 0.05, max(pre) + 0.06)
     ax.set_title("B. Cheap-tier band sweep (precision vs coverage)",
@@ -157,22 +152,45 @@ def main() -> None:
                  fontweight="bold")
     ax.set_ylabel("accuracy vs gold (CV-5 for stacker)")
 
-    # D — fires at shipped bands
+    # D — fires: legacy original vs legacy recalibrated vs shipped word tier
     ax = axes[1, 1]
-    labels = ["legacy DFT\nband 0.95", "legacy RF\nband 0.80",
-              f"word tier\nband {CHEAP_THRESHOLD}"]
-    fires = [legacy_dft, legacy_rf, word]
-    dcols = [PALETTE["alabaster"], PALETTE["alabaster"], PALETTE["orange"]]
+    dft_v = df["dft_v"].to_numpy()
+    rf_v = df["rf_v"].to_numpy()
+
+    m_dft_orig = np.abs(dft_v) >= 0.95
+    m_rf_orig = np.abs(rf_v) >= 0.80
+    m_dft_cal = np.abs(dft_v) >= 0.30
+    m_rf_cal = (~m_dft_cal) & (np.abs(rf_v) >= 0.10)
+    m_word = np.abs(cv) >= CHEAP_THRESHOLD
+
+    prec = lambda vals, mask: float(
+        (label_from_v(vals[mask]) == gold[mask]).mean()) if mask.any() else None
+    bars = [
+        ("legacy DFT\norig 0.95", int(m_dft_orig.sum()), None),
+        ("legacy RF\norig 0.80", int(m_rf_orig.sum()), None),
+        ("legacy DFT\ncal. 0.30", int(m_dft_cal.sum()), prec(dft_v, m_dft_cal)),
+        ("legacy RF\ncal. 0.10", int(m_rf_cal.sum()), prec(rf_v, m_rf_cal)),
+        ("word tier\nshipped 0.6", int(m_word.sum()), prec(cv, m_word)),
+    ]
+    labels = [b[0] for b in bars]
+    fires = [b[1] for b in bars]
+    dcols = [PALETTE["alabaster"]] * 4 + [PALETTE["orange"]]
     ax.bar(labels, fires, color=dcols, edgecolor=PALETTE["prussian"], linewidth=0.6)
-    ax.text(2, word + 4, f"{word} fires · {word_prec:.0%} precision",
-            ha="center", fontsize=9.5, fontweight="bold",
-            color=PALETTE["prussian"])
-    ax.text(0.5, 6, "0 fires — deprecated,\nnever reaches its band",
-            ha="center", fontsize=9, color="#555555")
-    ax.set_ylim(0, max(fires) * 1.35)
-    ax.set_title("D. Who fires at shipped bands (of 240)", loc="left",
+    for i, (lab, f, p) in enumerate(bars):
+        if f == 0:
+            ax.text(i, 3, "0 fires", ha="center", fontsize=9, color="#555555")
+        else:
+            note = f"{f} · {p:.0%} prec." if p is not None else f"{f}"
+            ax.text(i, f + max(fires) * 0.02, note, ha="center", fontsize=9,
+                    fontweight="bold", color=PALETTE["prussian"])
+    ax.text(1.5, max(fires) * 0.52,
+            "band-lowering buys coverage\nat chance-level precision (35%)",
+            ha="center", fontsize=8.5, color="#555555", style="italic")
+    ax.set_ylim(0, max(fires) * 1.18)
+    ax.set_title("D. Fires at legacy vs shipped bands (of 240)", loc="left",
                  fontsize=11, fontweight="bold")
     ax.set_ylabel("headlines fired")
+    ax.tick_params(axis="x", labelsize=8)
 
     fig.tight_layout(rect=(0, 0, 1, 0.93))
     OUT.parent.mkdir(parents=True, exist_ok=True)
