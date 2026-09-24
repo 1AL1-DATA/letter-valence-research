@@ -1,529 +1,138 @@
 # letter-valence-research
 
-**Can the letters of an English word predict its sentiment? An empirical study of 68 letter-derived numerical features across 13,914 words and 1,967 financial sentences.**
+**Can the letters of an English word predict its sentiment?** 68 letter-derived
+features → RF **0.7377 ± 0.0058 CV** (held-out 20%: 0.751) on financial sentences —
+a real but weak signal. A word-level tier classifies sentiment better, so the letter
+tiers were replaced in the production cascade.
 
-Test @ https://letter-valence-research-git-main-name-a0b0.vercel.app/ 
+Test @ [https://letter-valence-research-git-main-name-a0b0.vercel.app/](https://letter-valence-research-git-main-name-a0b0.vercel.app/)
+— works best on article snippets, not single-sentence strings.
 
-**It tends to missclassify on one sentence strings. Try an actual article snippet for more optimal results.**
+![headline summary](figures/headline_summary.png)
 
-## Can the letters of a word predict its sentiment?
-
-*Short answer: a little bit, yes — but not from any single word. The signal only
-shows up once you average across a whole sentence, and even then it is a weak,
-secondary one.*
-
-**What we found, in plain terms**
-
-- Take any word. Ignore what it means — look only at which letters it is made
-  of (how far into the alphabet they sit, how many vowels, the shape of the
-  letter pattern). On their own, these letter-shapes barely predict how positive
-  or negative a word feels; on a single word, this will not help you bet.
-- Average that signal across every word in a sentence and a pattern emerges:
-  sentences whose words share certain letter-shapes lean positive or negative
-  more than chance. It is faint, but consistent.
-- The single biggest driver is a word's **vowel-to-consonant balance** — not the
-  "assign each letter a number and add it up" numerology people sometimes expect.
-  That part genuinely does not work (see below).
-
-**Does this actually matter for anything?**
-
-A little, with a caveat. Scoring text this way is extremely fast — it counts
-letters rather than understanding language — so it looks like a cheap first
-pass: skim a pile of documents for the obvious cases, hand the rest to a slower,
-smarter model. **We tested exactly that, and the letter model lost the job.**
-When it was deployed as the cheap tier of a real sentiment engine it was
-strictly dominated: a cheap tier based on *whole words* (TF-IDF + VADER + keyword
-features through a logistic regression) worked better, and is what we would
-actually recommend for that use case. The letter-only signal is a real,
-interesting fact about language — it is just not the most useful tool for the
-job it was originally proposed for. Details in [The 2-tier cascade
-follow-up](#the-2-tier-cascade-follow-up-why-the-letter-tiers-were-replaced).
-
-**The numbers, if you want them**
+## Key numbers
 
 | Question | Answer |
 |---|---|
-| How good is it, in accuracy terms? | **73.8%** in 5-fold cross-validation on financial-news sentences (held-out 20%: 75.1%), where always predicting the majority label gets **69.3%** |
-| Meaningful, or noise? | Meaningful. Shuffling the labels 50 times never produced a score this good (permutation p < 0.0001 as reported; conservative bound p < 0.02) |
-| Better than existing tools? | No — tuned VADER reaches 75%, FinBERT ~87%. A cheap, weak, interpretable signal, not a replacement |
-| Effect size at the single-word level? | Small. The best letter feature explains ~0.24% of the variation in how positive/negative a word feels |
-| Which letter pattern mattered most? | Vowel-to-consonant ratio (`vowel_ratio` r = +0.049; mirror `consonant_ratio` r = −0.049) |
-| Did the numerology-style features work? | No. None of them survive correcting for testing 68 things at once |
+| How good? | 0.7377 5-fold CV, 0.751 held-out (majority baseline 0.693) |
+| Noise? | permutation test: 0/50 label shuffles beat it (p < 0.02) |
+| Better than existing tools? | No — tuned VADER 0.750, FinBERT ~0.87 |
+| Strongest family | spectral DFT alone 0.7346; strongest feature `vowel_ratio` (r = +0.049) |
+| Do the numerology features work? | No — none survive Bonferroni; dropping the modular family leaves 0.7422 |
+| Effect size (single word) | ~0.24% variance — the signal appears only when averaging over words |
+| Speed / bottleneck | ~50k cls/s/CPU; learning curve plateaus at n ≈ 1,376 (feature-bound) |
 
-Full method comparison in [What's in the headline number](#whats-in-the-headline-number).
+## The sentiment cascade (production outcome)
 
-**Honest limits**
+The letter model lost the cheap-tier job: the DFT probe never fires on FPB
+(max |v| 0.922 < 0.95) and the letter RF fires on 3.6% of sentences. The shipped
+design is a **2-tier cascade** — word cheap tier (TF-IDF 1–2 grams + VADER +
+keyword → 3-class logistic, decides at |v| ≥ 0.6) → FinancialBERT, VADER as final
+fallback. Engine lives in `src/sentiment_engine/` (legacy letter engine kept for
+comparison).
 
-- Tested on financial news only — we do not know whether it transfers to tweets, fiction, or everyday conversation.
-- The effect only appears when averaging across many words; judging a single word this way is not reliable.
-- English only. The method leans on an English pronunciation dictionary and English letter-frequency statistics, so it likely would not transfer to other languages as-is.
+- **FinancialPhraseBank:** cheap tier decides 36.6% of clear-polarity calls at
+  97.2% accuracy; cascade 0.9512 vs 0.9558 heavy-only (McNemar p = 0.15, ns) while
+  cutting transformer load by a third; neutral false-polarity 19.6% → 7.7%.
+- **NewsMTSC (general news):** with a domain-appropriate heavy, the news-cheap
+  cascade reaches 0.6190 vs heavy-only 0.5760 (McNemar p ≈ 8×10⁻⁷); the
+  finance-tuned FinancialBERT collapses out-of-domain (0.30 — below the 0.616
+  majority baseline). The cascade approach generalises; the finance-tuned heavy is
+  the domain-locked part.
+- *Leak caveat:* FinancialBERT was itself fine-tuned on FPB, so absolute in-domain
+  numbers are optimistic; relative comparisons share the same heavy and are unaffected.
 
-<details>
-<summary><strong>For the statistically inclined: exact methodology and numbers</strong></summary>
+![cascade evaluation](figures/cascade_sentiment_eval.png)
 
-- **Data**: 1,967 labelled FinancialPhraseBank sentences (604 negative / 1,363 positive); 13,915 English words with human valence ratings from Warriner et al. (2013), 13,914 after removing rows with missing values, non-alphabetic entries, or single-character words.
-- **Model**: random forest on 68 hand-built letter-derived features across 12 families, 5-fold stratified cross-validation. The DFT (spectral) family alone reaches 0.7346; dropping the modular family alone leaves accuracy at 0.7422 (within CV noise).
-- **Headline result**: 0.7377 ± 0.0058 accuracy (F1 = 0.835); held-out 20% test: 0.751.
-- **Significance**: permutation test, 50 label shuffles — the observed 0.7377 beat all 50 (stored `p_value` = 0.0 in `results/permutation_test.json`; strict 0-of-50 bound p < 1/51 ≈ 0.02). The reported "p < 0.0001" is a parametric extrapolation from the null distribution: the observed result sits ~13.8 SD above the null mean (0.679 ± 0.004, null 99th percentile 0.690).
-- **Word-level correlations**: 8 of 68 features survive Bonferroni correction (α = 0.05/68 ≈ 7.4×10⁻⁴). Strongest: `vowel_ratio` (r = +0.049, p ≈ 9×10⁻⁹).
-- **Gematria / modular-arithmetic features**: none survive Bonferroni; the closest is `is_prime_sum` (p ≈ 0.067).
-- **Learning curve** plateaus around n = 1,376 training articles — the bottleneck is features, not data.
-- **Speed**: ~50,000 classifications/second on a CPU (single-threaded).
+Full numbers: `results/cascade_benchmark.json`, `results/general_news_benchmark.json`.
 
-Full reproduction steps: see [METHODOLOGY.md](METHODOLOGY.md).
-</details>
+## Live-headline validation (2026-09-25)
 
-> **Cascade follow-up (2026-08-07).** When the letter model was deployed as the cheap tier of a real sentiment engine, it turned out to be **strictly dominated**: the DFT probe's max `|v|` (0.922) never clears its 0.95 threshold, and the letter RF fires on only 3.6% of sentences. A **word-level cheap tier** — TF-IDF (1–2 grams) + VADER + keyword features through a 3-class logistic regression — replaces both. In a 2-tier cascade (cheap word tier → FinancialBERT), the cheap tier decides **36.6%** of clear-polarity calls at **97.2% accuracy** and the cascade scores **0.9512** vs **0.9558** for heavy-only (McNemar p = 0.15, not significant) while cutting transformer load by a third. One-third of calls never touch the transformer. Full evaluation in `results/cascade_benchmark.json` + `src/benchmark_cascade.py`.
+240 live Google News RSS headlines vs single-LLM-judge synthetic gold
+(92 neutral / 89 positive / 59 negative). Harness `src/cascade_eval.py`,
+engine `src/sentiment_engine/`:
 
-> **Cross-domain generalisation (2026-08-07).** The same cascade architecture was evaluated on **general news** (NewsMTSC, 1,067 held-out non-financial sentences). The cheap tier trained **only on FinancialPhraseBank** still beats the finance-tuned FinancialBERT on general news (0.42 vs 0.30 — the latter lands *below the 61.6% majority-class baseline* and below 50% random guessing, predicting neutral on 65.3% of clear sentences). Retrained on news it reaches 0.49. With a domain-appropriate general transformer, the news-trained-cheap cascade beats heavy-only (0.62 vs 0.58; exact McNemar p ≈ 8×10⁻⁷, +4.3 points [2.8, 4.9]) while the cheap tier absorbs ~24% of calls at 91.8% accuracy; the FPB-trained-cheap cascade's +2.2-point edge is not significant, and the two cascade variants are not established as different (p = 0.049, above the 0.01 threshold). **The cascade approach is a general feature; the finance-tuned heavy is the domain-locked part.** Full evaluation in `results/general_news_benchmark.json` + `src/benchmark_general.py`; significance audit in `src/robustness_analysis.py`.
+- legacy letter tiers: **0 fires** at shipped bands (0.95 / 0.80)
+- word tier: 16 fires (6.7% coverage) at **81.2% precision** (band sweep peaks at
+  84% for band 0.5)
+- VADER 48.3% overall (keyword 51.2%), but 79% precision at |compound| ≥ 0.6
+- 5-signal CV stacker **58.3%** vs best single 51.2%; oracle ceiling 80.4%
 
-> **This repo is also a reference implementation of a research-artifact structure.** See [TEMPLATE.md](TEMPLATE.md) for the generic 5-layer structure, the 10 mandatory files, the 6 recommended files, the 4 anti-patterns, the 6-question principled evaluation checklist, the 8 figures standard, and the 18-item readiness checklist.
+![live-headline evaluation](figures/headline_gold_findings.png)
 
-![Headline chart](figures/headline_summary.png)
+## Features
+
+68 features in 12 families computed from a word's letters plus corpus letter
+statistics: alphabet-position sums, modular/gematria arithmetic, letter frequency,
+bigrams, CMUdict phonetics, vowel/consonant shape, word length, centeredness,
+**spectral (DFT + autocorrelation)**, gzip compression, symmetry/run-length.
+The DFT and vowel/consonant families carry the signal; the numerology families
+contribute ~ nothing. Exact formulas: docstrings in `src/features.py`.
 
 ## Repository structure
 
 ```
 letter-valence-research/
-├── README.md                   ← you are here
-├── METHODOLOGY.md              ← detailed reproduction guide
-├── TEMPLATE.md                ← research-artifact template (generic)
-├── LICENSE                    ← CC-BY-4.0 (prose) + MIT (code)
-├── CHANGELOG.md               ← version history
-├── CONTRIBUTING.md            ← how to extend the work
-├── CITATION.cff               ← GitHub-native citation
-├── AUTHORS                    ← contributors
-├── requirements.txt           ← Python dependencies
-├── data/
-│   ├── README.md              ← what each file is and where it came from
-│   ├── download.sh            ← idempotent download script
-│   ├── warriner2013.csv       ← 13,915 Warriner lemmas, valence ratings (13,914 usable after cleaning)
-│   ├── articles_binary.csv     ← 1,967 FPB sentences, pos/neg labels
-│   ├── cmudict.dict           ← CMU Pronouncing Dictionary (135k words)
-│   ├── letter_freqs.json      ← derived: letter unigram + bigram counts
-│   ├── words_alpha.txt         ← 370k-word English word list
-│   ├── Sentences_50Agree.txt  ← source for articles_binary.csv
-│   ├── newsmtsc/              ← NewsMTSC train + devtest_rw JSONL (general news)
-│   └── cascade_test/          ← 240 live headlines + LLM-judge gold + results CSV
-├── src/
-│   ├── __init__.py
-│   ├── features.py            ← 68 letter-derived features in 12 families
-│   ├── data.py                ← data loading + derivation utilities
-│   ├── train.py               ← model training + cross-validation
-│   ├── evaluate.py            ← CV, permutation test, learning curve, ablation
-│   ├── analyze.py             ← main entry point — runs the full pipeline
-│   ├── figures.py             ← 8 PNG charts (300 dpi)
-│   ├── train_final.py         ← trains and saves the production model
-│   ├── classify.py            ← paragraph classifier (CLI + library)
-│   ├── visualise.py           ← DFT + SHAP visualisation script
-│   ├── benchmark_cascade.py   ← 2-tier cascade eval (cheap word tier → heavy)
-│   ├── benchmark_general.py   ← cross-domain cascade eval on general news
-│   ├── figures_cascade.py     ← 4-panel cascade figure
-│   ├── figures_general.py     ← 4-panel general-news cascade figure
-│   ├── figures_headline.py    ← 4-panel live-headline findings figure
-│   ├── cascade_eval.py        ← live-headline eval: gold labels, ensembles, band sweep
-│   ├── sentiment_engine/      ← shipped 2-tier engine + legacy letter engine (self-contained assets)
-│   ├── animate.py             ← 3D spectral waterfall + word-trajectory animations
-│   └── style.py               ← shared palette + matplotlib style
-├── tests/
-│   ├── test_features.py       ← 33 unit tests, all passing
-│   └── README.md
-├── notebooks/
-│   └── 01_reproduce_main_result.ipynb   ← walkthrough with visualisations
-├── results/
-│   ├── cv_random_forest.csv   ← 5-fold CV result, headline metric
-│   ├── cv_logistic_regression.csv
-│   ├── cv_ridge.csv
-│   ├── learning_curve.csv      ← bias-variance decomposition
-│   ├── family_ablation.csv    ← leave-one-family-out
-│   ├── single_family.csv      ← each family alone
-│   ├── permutation_test.json  ← null distribution + p-value
-│   ├── cascade_benchmark.json ← 2-tier cascade evaluation (FPB)
-│   ├── cascade_predictions.csv ← per-instance component valences + routing
-│   ├── general_news_benchmark.json ← cross-domain cascade eval (NewsMTSC)
-│   ├── general_news_predictions.csv ← per-instance valences + routing (news)
-│   ├── summary.json           ← machine-readable headline numbers
-│   └── SUMMARY.md             ← one-page plain-English summary
-├── figures/                   ← 15 PNG charts (300 dpi) + animations
-│   ├── headline_summary.png   ← 5-model comparison bar chart
-│   ├── method_comparison.png   ← box plot of 3 classifiers
-│   ├── family_ablation.png     ← leave-one-family-out results
-│   ├── single_family.png       ← each feature family independently
-│   ├── learning_curve.png      ← learning curve with plateau
-│   ├── roc_curve.png           ← ROC AUC
-│   ├── word_level_correlations.png  ← Warriner feature correlations
-│   ├── feature_heatmap.png     ← feature family × metric heatmap
-│   ├── dft_spectral_heatmap.png    ← positive vs negative average DFT spectrum
-│   ├── dft_word_fingerprints.png   ← individual word DFT spectra
-│   ├── shap_beeswarm.png       ← SHAP feature attribution landscape
-│   ├── shap_bar.png            ← SHAP mean |SHAP| per feature
-│   ├── shap_waterfall.png      ← SHAP waterfall: one pos + one neg example
-│   ├── cascade_sentiment_eval.png ← 2-tier cascade evaluation (4 panels)
-│   ├── general_news_eval.png  ← cross-domain cascade evaluation (4 panels)
-│   ├── headline_gold_findings.png ← live-headline evaluation vs gold (4 panels)
-│   ├── sentiment_cascade_funnel.png ← live-news cascade funnel (word tier vs heavy)
-│   ├── sentiment_cascade_valence_bands.png ← word tier vs legacy DFT bands
-│   ├── sentiment_cascade_examples.png ← per-example firings vs gold
-│   └── animations/            ← 3D spectral waterfall + word-trajectory MP4s
-├── models/
-│   ├── cheap_tier.pkl         ← word-level cheap tier (TF-IDF + logreg, FPB-trained)
-│   └── letter_sentiment_rf.pkl   ← trained RF model (3.7 MB)
-├── docs/
-│   └── architecture.md
-├── blog_post.md               ← 2,000-word narrative blog draft
-├── linkedin_post.md           ← short-form LinkedIn version
-├── research_report.md         ← full formal report (~22 KB)
-├── lit_digest.md              ← per-paper digest of 5 foundational works
-├── arxiv_paper.tex           ← arXiv preprint (LaTeX, NeurIPS-style)
-└── arxiv_paper.pdf           ← compiled version (14 pages, 639 KB)
+├── src/            ← features, training, evaluation, figures, cascade eval, sentiment_engine/
+├── data/           ← FPB sentences, Warriner norms, CMUdict, NewsMTSC, cascade_test/
+├── results/        ← CV tables, cascade + general-news benchmarks (JSON/CSV)
+├── figures/        ← 19 PNGs (300 dpi) + animations/
+├── models/         ← cheap_tier.pkl, letter_sentiment_rf.pkl
+├── tests/          ← 33 unit tests
+├── notebooks/      ← 01_reproduce_main_result.ipynb
+├── METHODOLOGY.md · research_report.md · blog_post.md · lit_digest.md
+├── TEMPLATE.md · docs/ · requirements.txt · CITATION.cff · LICENSE
 ```
 
-## Reproducing the headline result
+## Reproducing
 
 ```bash
-# 1. Get the data (skip if data/ is already populated)
-cd data && ./download.sh && cd ..
-
-# 2. Install dependencies
+cd data && ./download.sh && cd ..   # data is committed; script re-fetches if needed
 pip install -r requirements.txt
 
-# 3. Run the full analysis pipeline (writes to results/ and figures/, ~10 min)
-python -m src.analyze
-
-# 4. Generate DFT and SHAP visualisations
-python -m src.visualise
-
-# 5. Train and save the production model
-python -m src.train_final
-
-# 6. Classify a single paragraph (CLI)
-python -m src.classify --text "The company reported record earnings."
+python -m src.analyze                # full pipeline → results/ + figures/ (~10 min)
+python -m src.visualise              # DFT + SHAP panels
+python -m src.train_final            # save models/letter_sentiment_rf.pkl
 python -m src.classify --text "The company reported record earnings." --compare
-
-# 7. Run the 2-tier cascade evaluation (cheap word tier → heavy)
-#    Requires torch + transformers (not in requirements.txt) and a Hugging Face
-#    download of FinancialBERT on first run.
-python -m src.benchmark_cascade
-python -m src.figures_cascade
-
-# 7b. Cross-domain generalisation: same cascade on general news (NewsMTSC)
-#     Downloads two transformers (FinancialBERT + a general-domain BERT) on first run.
-python -m src.benchmark_general
-python -m src.figures_general
-
-# 8. Run the tests
 python -m unittest discover tests/
 
-# 9. Walk through the visualisations
-jupyter notebook notebooks/01_reproduce_main_result.ipynb
+# cascade evaluations (need torch + transformers; HF download on first run)
+python -m src.benchmark_cascade && python -m src.figures_cascade
+python -m src.benchmark_general && python -m src.figures_general
+
+# live-headline harness (heavy tier offline)
+python -m src.cascade_eval && python -m src.figures_headline
 ```
 
-## What's in the headline number
+## Honest limits
 
-The 0.7377 accuracy is **5-fold stratified cross-validation** on the
-FinancialPhraseBank binary split (negative vs positive; 604 + 1363 sentences
-after removing neutrals). A **held-out 20% test** gives 0.751 accuracy.
+- Financial text only, English only; single words are unreliable — the effect
+  appears when averaging across words.
+- Does not beat tuned VADER (0.750) or FinBERT (~0.87); per-word R² ≈ 0.005.
+- FPB cascade absolutes are optimistic (leak caveat above); the live-headline gold
+  is single-judge synthetic.
+- The letter finding is real psycholinguistics — just not the right production
+  cheap tier.
 
-Class-prior baseline (always predict positive) is 0.693. The permutation
-p-value is computed by shuffling labels 50 times — zero of 50 shuffled runs beat
-the real run. The null distribution sits at 0.679 ± 0.004.
+## More detail
 
-For comparison:
-
-| Method | Accuracy | F1 | Notes |
-|---|---|---|---|
-| Class-prior baseline | 0.693 | 0.819 | always predict positive |
-| Stratified random | 0.574 ± 0.008 | 0.693 | n=100 trials, mean |
-| VADER (lexicon, threshold 0) | 0.678 | 0.754 | rule-based sentiment |
-| VADER (lexicon, threshold −0.05) | 0.750 | 0.840 | best VADER tuning |
-| Ridge classifier on letter features | 0.721 | 0.810 | linear baseline |
-| Logistic regression on letter features | 0.709 | 0.799 | linear baseline |
-| **Random forest on letter features (ours, 5-fold CV)** | **0.7377** | **0.835** | 100 trees, default RF |
-| **Random forest on letter features (held-out 20%)** | **0.751** | **0.842** | same model, held-out test |
-| FinBERT (BERT-base finance-tuned, from literature) | ~0.87 | ~0.87 | much slower, GPU |
-
-## What the features are
-
-68 features in 12 families. All are computable from the **letters of a single
-word** plus optional corpus-level statistics (letter unigram + bigram counts
-from a 370k-word English word list). The families:
-
-| Family | # features | Examples |
-|---|---|---|
-| F1 Alphabet position aggregations | 8 | `alpha_sum`, `alpha_mean`, `alpha_min`, `alpha_max` |
-| F2 Group-theoretic / modular | 9 | `sum_mod3`, `sum_mod9`, `is_prime_sum`, `digital_root` |
-| F3 Letter frequency / corpus | 3 | `letter_freq_mean`, `letter_freq_sum`, `rare_letter_count` |
-| F4 Bigram statistics | 2 | `bigram_unique_ratio`, `trigram_count` |
-| F5 Phonetic (CMUdict) | 10 | `phon_vowel_ratio`, `phon_plosive_ratio`, `phon_voiceless_ratio` |
-| F6 Vowel/consonant shape | 8 | `vowel_ratio`, `consonant_ratio`, `plosive_count`, `fricative_count` |
-| F7 Word length | 2 | `word_length`, `log_word_length` |
-| F8 Group attractors (original) | 2 | `alphabet_centeredness`, `letter_position_skew` |
-| F9 Spectral (DFT) | 8 | `dft_power_k1`, `dft_spectral_entropy`, `autocorr_lag1` |
-| F10 Compression (Kolmogorov) | 3 | `gzip_size`, `gzip_size_per_char` |
-| F11 Number-theoretic (gematria-like) | 4 | `letter_product_mod26`, `word_value_mod_9`, `mispar_hechrechi_sum` |
-| F12 Symmetry / run-length / position | 9 | `is_palindrome`, `max_run_length`, `n_runs`, `first_letter_lp` |
-
-For the full list and exact formulas, see the docstrings in `src/features.py`.
-
-## What the analysis shows
-
-1. **Letter features carry a real, statistically significant sentiment signal** at the article level (p < 0.0001 vs permutation null).
-
-2. **Per-word effect sizes are small.** The strongest single feature is `vowel_ratio` (Pearson r = +0.049, with the mirror-image `consonant_ratio` at r = −0.049) on the 13,914-word Warriner norms; the DFT term `dft_power_k1` has r = −0.031. Eight features survive Bonferroni at α = 0.05/68.
-
-3. **The "math in words" is most salient in the spectral domain.** DFT features alone reach 0.7346 accuracy — almost as good as the full 68-feature model (0.7377). Gematria-style modular arithmetic (F2) and gematria traditions (F11) together account for less than 0.5% of the model. Dropping the modular-arithmetic family (F2) alone actually leaves accuracy at 0.7422 — within CV noise of, and numerically above, the full model — so the modular features are uninformative rather than merely weak (full table in `results/family_ablation.csv`).
-
-4. **The bias-variance regime is "features-bound, not data-bound".** The learning curve plateaus around n=1,376 examples. Adding more labeled data would not help much; adding more informative features would.
-
-5. **Practical use case: fast pre-filter for large-scale ingestion.** At ~50,000 classifications per second on a CPU (single-threaded), the approach can pre-screen millions of documents per day. For large-scale document pipelines — scanning 10-K filings, news feeds, research reports — a lightweight letter-feature filter can reduce the volume sent to a heavier model (LLM or transformer-based sentiment classifier), cutting compute cost where the signal is clear.
-
-## The 2-tier cascade follow-up (why the letter tiers were replaced)
-
-This repository is also the evaluation home of the **sentiment cascade** used by the
-[esg-dashboard](https://github.com/1AL1-DATA/esg-dashboard) news pipeline. The original
-design had three tiers — DFT probe → letter RF → FinancialBERT. Empirically, the letter
-tiers were **strictly dominated** and effectively dead weight:
-
-- The **DFT probe** never fired on the 1,967 clear-polarity sentences: its maximum
-  `|v|` was 0.922, below the 0.95 firing threshold.
-- The **letter RF** fired on only 3.6% of sentences (71/1,967), so the heavy tier
-  silently handled 96.4% of the load anyway.
-- The letter features themselves cap at **0.7377 binary CV** (feature-bound, not
-  data-bound — the learning curve plateaus at n≈1,376), while a plain word-level
-  TF-IDF model on the same data reaches 0.79–0.84.
-
-The fix was a **word-level cheap tier**: TF-IDF (1–2 grams) + VADER compound +
-keyword valence, through a 3-class logistic regression (v = p_pos − p_neg). The
-cascade is now two tiers: **cheap word tier → FinancialBERT**, with VADER only as a
-final fallback. At the chosen operating point the cheap tier decides **when |v| ≥ 0.6**
-and routes everything else to the heavy tier:
-
-| Metric | Heavy-only | Cascade (cheap → heavy) |
-|---|---|---|
-| Clear-polarity accuracy | 0.9558 | **0.9512** |
-| Wilson 95% CI | [0.9458, 0.9640] | [0.9408, 0.9599] |
-| Negative F1 / positive F1 | 0.968 / 0.975 | 0.957 / 0.971 |
-| Macro-F1 | 0.972 | 0.964 |
-| Cheap tier share of clear calls | — | **36.6% @ 97.2% acc** |
-| False-polarity on neutral set | 4.9% | 7.7% |
-| McNemar vs heavy-only | — | **p = 0.15 (ns)** |
-
-The 0.9512 vs 0.9558 difference is **not statistically significant** (exact McNemar
-p = 0.15; 20 vs 11 discordant pairs), but the cheap tier absorbs a third of the transformer's workload — at 1%
-of the compute. On the neutral set (n = 2,879) the cascade cuts the cheap tier's
-false-polarity rate from 19.6% to 7.7% (**p ≈ 3×10⁻⁶¹**, exact McNemar) while paying
-a small but real cost versus heavy-only (7.7% vs 4.9%, **p ≈ 4×10⁻²⁵**): the
-"small polarity cost" framing is statistically supported, and so is the reduction
-relative to the cheap tier. **This is the "letter pre-filter" hypothesis tested to
-its conclusion: the signal is real but lives in words, not letters.**
-
-> **Leak caveat on the absolute FPB numbers.** `ahmedrachid/FinancialBERT-Sentiment-Analysis`
-> was itself fine-tuned on FinancialPhraseBank, so ~90% of the 4,846 evaluation
-> sentences were seen by the heavy tier during its own fine-tuning; the in-domain
-> accuracies are optimistic (in-sample) ceilings. The relative
-> cascade-vs-heavy comparison (both share the identical heavy) and the
-> compute-savings conclusion are unaffected. See
-`src/benchmark_cascade.py`, `results/cascade_benchmark.json`, and
-`figures/cascade_sentiment_eval.png`.
-
-## Live-headline validation (2026-09-25)
-
-The evaluations above use FinancialPhraseBank/NewsMTSC *sentences*; production input
-is *headlines*. The shipped engine is now **ported into this repo**
-(`src/sentiment_engine/engine.py` — the 2-tier word cascade; the deprecated letter
-cascade rides along as `legacy_engine.py` for side-by-side evaluation) and was
-validated on **240 live Google News RSS headlines** (12 tickers, deduped) labelled by
-a single LLM judge — synthetic gold (92 neutral / 89 positive / 59 negative), one
-judge, no adjudication, so treat accuracy as indicative. Harness:
-`src/cascade_eval.py`; data + results in `data/cascade_test/`; regenerate the figure
-with `python -m src.figures_headline`.
-
-![Live-headline evaluation vs gold](figures/headline_gold_findings.png)
-
-- **Legacy letter tiers: 0 fires.** At the shipped 0.95 / 0.80 bands the DFT probe
-  and letter RF answer nothing on headlines (max |v| 0.933 / 0.720) — the dominance
-  result holds out-of-domain. Forced to answer, their label accuracy is 35.4% / 38.8%
-  against an always-neutral baseline of 38.3%: chance.
-- **The word tier has a real confidence gradient** (the letter tiers had none):
-  precision 51% → 76% → 84% as the band rises 0.2 → 0.4 → 0.5. The shipped band 0.6
-  gives **16 fires (6.7% coverage) at 81.2% precision**, 0 wrong on directional gold.
-  The FPB-benchmark 36.6% cheap share shrinks on headlines because the pkl is
-  FPB-trained — headline retraining would recover coverage.
-- **VADER** is 48.3% overall (keyword 51.2%) but bands cleanly too: 79% precision at
-  |compound| ≥ 0.6.
-- **Combinations pay off once members carry signal**: a 5-signal logistic stacker
-  (word, DFT, RF, VADER, keyword valences) under 5-fold CV reaches **58.3%** vs 51.2%
-  for the best single signal; the oracle ceiling (any-of-5 correct) is 80.4%. The
-  earlier 3-signal ensembles failed because the letter tiers were chance-level noise.
-
-## Does the cascade generalise beyond finance? (NewsMTSC)
-
-To check that the 2-tier cascade is a *general* feature and not a finance-specific
-trick, the same architecture was evaluated on **[NewsMTSC](https://github.com/fhamborg/NewsMTSC)**
-(Hamborg et al., EACL 2021) — 5-coder-labelled 3-class sentence sentiment from
-real-world general news (AllSides), held-out `devtest_rw` split (n = 1,067; 651
-clear-polarity + 416 neutral). Two cheap-tier variants were tested against two
-fixed heavy tiers:
-
-- **`cheap_fpb`** — identical word-level cheap tier trained **only on FinancialPhraseBank**
-  (cross-domain transfer, zero general-news supervision).
-- **`cheap_news`** — same architecture retrained on the 7,758 NewsMTSC train sentences.
-- **`heavy_fin`** — FinancialBERT (finance-tuned), **`heavy_gen`** — a general-domain
-  transformer (`cardiffnlp/twitter-roberta-base-sentiment-latest`).
-
-| Method | Clear acc (Wilson 95% CI) | Macro-F1 | False-pol. on neutral (95% CI) |
-|---|---|---|---|
-| Keyword lexicon | 0.0661 [0.049, 0.088] | 0.1199 | 5.3% [3.5, 7.9] |
-| FinancialBERT alone (heavy_fin) | 0.3041 [0.270, 0.341] | 0.4581 | 15.4% [12.2, 19.2] |
-| Cheap tier trained on FPB only | 0.4209 [0.384, 0.459] | 0.5523 | 30.5% [26.3, 35.1] |
-| VADER | 0.4685 [0.431, 0.507] | 0.5744 | 36.5% [32.1, 41.3] |
-| Cheap tier trained on news | 0.4931 [0.455, 0.531] | 0.6069 | 26.7% [22.7, 31.1] |
-| General BERT alone (heavy_gen) | 0.5760 [0.538, 0.613] | 0.6641 | 23.3% [19.5, 27.6] |
-| Cascade (FPB cheap → gen heavy) | 0.5975 [0.559, 0.635] | 0.6741 | 27.4% [23.3, 31.9] |
-| **Cascade (news cheap → gen heavy)** | **0.6190 [0.581, 0.656]** | **0.6940** | 26.4% [22.4, 30.9] |
-| Majority-class baseline ("always negative") | 0.6160 | — | — |
-
-The clear set is imbalanced (401 negative / 250 positive), so the majority-class
-baseline is 0.6160: **only the news-cheap cascade (0.6190) clears it**, and the
-heavy-only 0.5760 is *below* it. A dataset-leakage check found that four of the
-1,067 devtest sentences (two of them clear-polarity) also appear in the NewsMTSC
-training split used to train the news cheap tier — a ~0.4% overlap whose
-worst-case contribution to the +4.3-point headline is ≤ ~0.3 points.
-
-All significance is exact two-sided McNemar on the paired sentences. Two honest
-findings, with the significance that survives the numbers:
-
-1. **The cheap word tier transfers out of finance.** Trained on nothing but
-   FinancialPhraseBank, it still beats the finance-tuned FinancialBERT on general
-   news (0.4209 vs 0.3041, **p ≈ 4×10⁻⁷**) and closes most of the gap to VADER —
-   though it remains significantly below it (p ≈ 5×10⁻⁴). Retrained on news it is
-   the strongest single non-transformer component (0.4931), numerically above
-   VADER but not significantly so (p = 0.20).
-2. **The finance-tuned heavy is the domain-locked part.** FinancialBERT collapses
-   on general news — it predicts neutral on 65.3% of clear-polarity sentences and
-   lands *below the majority-class baseline* (0.3041 vs 0.616 — the clear set is
-   imbalanced, 401 negative / 250 positive, so "always-negative" alone scores
-   61.6%) and below 50% random guessing. With a domain-appropriate
-     general heavy, **only the news-cheap cascade is a supported win**: 0.6190 vs
-     0.5760, **+4.3 points (paired-Wilson CI [2.8, 4.9], bootstrap [2.5, 6.3])**,
-     **McNemar p ≈ 8×10⁻⁷** — the edge rests on 31 of 34 discordant pairs
-     favouring the cascade (all on cheap-routed instances).
-     The FPB-cheap cascade (0.5975) is numerically higher than heavy-only but **not
-     significant** (p = 0.02, above the 0.01 multiple-comparison threshold; 24 of
-     34 discordant pairs favour it) — a
-     point estimate, not an improvement; the two cascade variants do not differ
-     reliably from each other at the corrected α = 0.01 level (p = 0.049, 29 of
-     44 discordant pairs favouring the news-cheap variant;
-     95% bootstrap CI on the difference [+0.2, +4.2] points is marginal). Both cascades do beat their own cheap tiers
-     (p ≈ 3×10⁻⁹ and 10⁻¹³). The cheap tier
-    absorbs 24.3% of clear calls (n = 158, CI [21.1, 27.7]) at 91.8% accuracy (CI
-    [86.4, 95.1]). A routing-only threshold sweep (band held fixed at 0.1) reaches
-    0.654 accuracy at a 53% heavy share (0.647 for the FPB-cheap variant) — the
-    best point of an **in-sample** grid, an upper bound, not a held-out estimate.
-    The label band is *not* swept: varying it is confounded with routing (a
-    narrower band trivially raises accuracy on a clear-only set), and the earlier
-    0.699 band-varying maximum was that artifact.
-
-**Borderline nuance (n = 416 neutral sentences).** On general news the cascade is
-*not* a false-polarity reducer: routing barely moves the rate relative to the
-cheap tier (26.4 vs 26.7%, p = 1.0; 27.4 vs 30.5%, p = 0.25) and is slightly but
-significantly *above* heavy-only (p ≈ 2×10⁻⁴ / <10⁻⁴). The resolvable difference
-is comparison-specific: a paired test at α = 0.01 / 80% power resolves
-≈ 2.8·√m/n points for m discordant pairs — ~7 points for the cascade-vs-cheap
-comparisons (m ≈ 110) but only ~2.4–2.8 points for the cascade-vs-heavy
-comparisons (m = 13/17). So the 0.3–3.1-point gaps to the cheap tier mean
-"indistinguishable here", not "equal", while the 3.1/4.1-point *worse*-than-heavy
-gaps are significant precisely because every discordant pair points the same way.
-Keyword's low 5.3% is bought by never committing — it predicts neutral on 90.5%
-of clear sentences (accuracy 0.066). FinancialBERT's low 15.4% is partly the same
-out-of-domain conservatism — it labels 84.6% of the borderline sentences neutral
-(the same default that sinks it on the clear set). The paired tests resolve a
-staircase, not a flat ordering: keyword is significantly below heavy_fin
-(p ≈ 7×10⁻⁷), heavy_fin below heavy_gen (p ≈ 2×10⁻³), heavy_gen below the two
-cascades (13/0 and 17/0 one-directional discordant pairs), and cheap_fpb below
-VADER (p ≈ 4×10⁻³). Not supported: the cascade-vs-cheap-tier steps (0.2–3.1
-points, below the ~7-point resolution; p = 1.0 / 0.86 / 0.25), so within the
-23–31% central plateau the cascade and its own cheap tier are indistinguishable
-in this sample. This
-contrasts with the **finance** borderline set (n = 2,879), where the cascade cuts
-cheap-tier false polarity 19.6% → 7.7% (p ≈ 3×10⁻⁶¹, paired-difference CI [0.107,
-0.128]) at a small real cost vs
-heavy-only (p ≈ 4×10⁻²⁵). On general news the cascade's benefit is the clear-set
-accuracy gain + compute saving, not polarity-error reduction.
-
-The cascade *approach* is general; the heavy model needs to match the domain.
-
-See `src/benchmark_general.py`, `results/general_news_benchmark.json`, and
-`figures/general_news_eval.png`. The dataset lives in `data/newsmtsc/`.
-
-## SHAP feature attribution
-
-SHAP (SHapley Additive exPlanations) values reveal how each feature contributes to individual predictions. Three visualisations are generated by `src/visualise.py`:
-
-- **`shap_beeswarm.png`** — beeswarm plot showing the full distribution of SHAP values across 400 test samples. Each dot is one feature for one sentence; colour encodes feature value (red = high, blue = low). Spread on the horizontal axis shows how much each feature can push predictions in either direction.
-- **`shap_bar.png`** — bar chart of mean absolute SHAP value per feature (top 30). The single most important feature by mean |SHAP| is `vowel_ratio` (mean aggregation); vowel ratio is the strongest single-word cue in the model.
-- **`shap_waterfall.png`** — waterfall plot for one positive and one negative sentence. Shows the base value and the per-feature contributions that add up to the final prediction.
-
-## The paragraph classifier
-
-The trained model is saved to `models/letter_sentiment_rf.pkl` by `python -m src.train_final`.
-Use it directly:
-
-```bash
-# CLI: classify a single paragraph
-python -m src.classify --text "The company reported record earnings." --compare
-
-# Library: import and use in Python
-from src.classify import classify, classify_batch, vader_score
-result = classify("The company missed estimates and cut guidance.")
-print(result["label"], result["confidence"], result["proba"])
-```
-
-The model takes any text, tokenises it to words, computes 68 features per word,
-aggregates across words (mean, max, min, std), scales, and classifies.
-It handles any paragraph length gracefully.
-
-## What's not in the headline number
-
-We are honest about the limits:
-
-- This was validated on **financial text only**. The formula may behave differently on social media, literature, or conversational text.
-- The formula does **not** beat a properly-tuned VADER (0.750) or FinBERT (~0.87) on the same data. It's a complement, not a replacement.
-- The per-word R² is ~0.005. The signal is real but small. Aggregating across words is what makes it useful.
-- We have not tested whether the formula transfers to **non-English** languages. The CMUdict is English-only, and the bigram frequencies are English.
-- **Letter features lose to words.** In the cascade evaluation (above), a word-level TF-IDF cheap tier strictly dominates the letter features as a pre-filter: the DFT probe never fires, and the letter RF fires on 3.6% of sentences. The letter research remains a valid psycholinguistic finding; it just is not the right cheap tier for a production engine.
+`METHODOLOGY.md` (full reproduction) · `research_report.md` (formal report) ·
+`lit_digest.md` (per-paper digest) · `TEMPLATE.md` (research-artifact structure) ·
+`results/` (machine-readable) · `blog_post.md` (narrative draft).
 
 ## License
 
-- **Code** (everything under `src/`, `tests/`, `data/download.sh`): MIT License.
-- **Prose and figures** (everything else: `README.md`, `blog_post.md`, `research_report.md`, `lit_digest.md`, `linkedin_post.md`, `arxiv_paper.tex`, `figures/`, `docs/`): CC-BY-4.0.
-- **Data** in `data/`: see `data/README.md` for the license of each individual file.
+- **Code** (`src/`, `tests/`, `data/download.sh`): MIT
+- **Prose and figures** (`README.md`, `blog_post.md`, `research_report.md`,
+  `lit_digest.md`, `figures/`, `docs/`): CC-BY-4.0
+- **Data**: see `data/README.md`
 
 ## Citation
 
-If you use this work, please cite it. The canonical BibTeX entry is in
-`CITATION.cff` (also see `arxiv_paper.tex` for the arXiv preprint).
-
-```bibtex
-@software{letter-valence-2026,
-  title = {Letter-derived numerical features of words and their correlation with sentiment},
-  author = {{Letter-valence research project}},
-  year = {2026},
-  url = {https://github.com/1AL1-DATA/letter-valence-research},
-  note = {68 letter-derived features, 13,914 Warriner lemmas, 1,967 FPB binary articles. Random Forest 5-fold CV accuracy 0.7377 (held-out 20%: 0.751), permutation p < 0.0001. Cascade follow-up: word-level cheap tier replaces letter tiers; 2-tier cascade accuracy 0.9512 vs 0.9558 heavy-only (McNemar p = 0.15). Cross-domain: same cascade on general news (NewsMTSC) reaches 0.62 with a general heavy; finance-tuned heavy collapses out-of-domain (0.30).}
-}
-```
-
-## Contributing
-
-Issues, pull requests, and extensions welcome. See `CONTRIBUTING.md`.
+See `CITATION.cff`.
 
 ## Acknowledgments
 
-This work stands on the shoulders of:
-- Warriner, Kuperman & Brysbaert (2013) for the 13,915-lemma affective norms.
-- Malo, Sinha, Korhonen, Wallenius, Takala (2014) for the FinancialPhraseBank.
-- Hamborg et al. (2021) for the NewsMTSC general-news sentiment dataset.
-- Adelman, Estes & Cossu (2018) and Aryani, Conrad, Schmidtke & Jacobs (2018) for the affective sound symbolism literature.
-- The CMU Pronouncing Dictionary project for the phonetic transcriptions.
-- The OSS community for the toolchain (Python, scikit-learn, numpy, scipy, shap).
+Warriner, Kuperman & Brysbaert (2013); Malo et al. (2014) FinancialPhraseBank;
+Hamborg et al. (2021) NewsMTSC; Adelman, Estes & Cossu (2018) and Aryani et al.
+(2018) sound symbolism; CMU Pronouncing Dictionary; the OSS toolchain.
