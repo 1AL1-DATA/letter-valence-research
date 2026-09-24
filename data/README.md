@@ -1,29 +1,42 @@
 # Data
 
-This directory holds the datasets used in the analysis. The files are **not** checked into git
-(because the largest ones are several MB) — they are downloaded by `./download.sh`.
+This directory holds the datasets used in the analysis. All data files **are
+checked into git** (including the several-MB ones) so a fresh clone reproduces
+everything offline; `./download.sh` re-fetches the source files if you ever need
+to rebuild them from upstream.
 
 ## Files
 
 | File | Source | Size | Used for |
 |---|---|---|---|
-| `Ratings_Warriner_et_al.csv` | Warriner, Kuperman & Brysbaert (2013), J. Behavior Research Methods | 3.7 MB | Word-level valence / arousal / dominance for 13,915 English lemmas |
+| `warriner2013.csv` | Warriner, Kuperman & Brysbaert (2013), J. Behavior Research Methods (XANEW mirror, fetched as `Ratings_Warriner_et_al.csv` — `src/data.py::load_warriner` accepts both names) | 3.7 MB | Word-level valence / arousal / dominance for 13,915 English lemmas |
 | `articles_binary.csv` | Malo et al. (2014) FinancialPhraseBank, GitHub mirror | 670 KB | Article-level positive/negative sentiment for 1,967 financial sentences |
 | `words_alpha.txt` | dwyl/english-words GitHub repo | 4.2 MB | 370k-word English word list — used to build letter unigram + bigram frequency tables |
 | `letter_freqs.json` | derived from `words_alpha.txt` | 8 KB | Pre-computed letter unigram + bigram counts and probabilities (input to bigram-surprisal features) |
 | `cmudict.dict` | CMU Sphinx project, cmudict.dict | 3.6 MB | CMU Pronouncing Dictionary — 135k words with phonetic transcriptions (input to phonetic features) |
 | `newsmtsc/train.jsonl` | Hamborg et al. (2021), NewsMTSC | 3.3 MB | General-news 3-class sentiment, train split (7,758 sentences, 5-coder labelled) |
 | `newsmtsc/devtest_rw.jsonl` | Hamborg et al. (2021), NewsMTSC | 0.4 MB | Held-out real-world test split (1,067 sentences) — cascade cross-domain eval |
+| `cascade_test/news_test.ndjson` | Google News RSS (12 tickers, 2026-09-24) | 124 KB | 240 live headlines for the cascade evaluation (`src/cascade_eval.py`) |
+| `cascade_test/gold_labels.json` | LLM judge, synthetic corpus (2026-09-24) | 5 KB | Gold labels for the 240 headlines: 92 neutral / 89 positive / 59 negative. **Synthetic labels, not independent ground truth; single judge, no adjudication** (meta block in the file) |
+| `cascade_test/sentiment_cascade_results.csv` | derived by `src/cascade_eval.py` | 129 KB | Per-headline tier valences, routing and labels |
 
-## How to download
+## How to re-download
 
 ```bash
 cd data
 ./download.sh
 ```
 
-This downloads all 5 files (5 source downloads + 1 derivation) and writes them to this directory.
-The script is idempotent: if a file already exists, it is skipped.
+`download.sh` fetches the **4 source downloads** (Warriner mirror, FinancialPhraseBank
+50Agree split, english-words list, cmudict) and rebuilds the **2 derived files**
+(`letter_freqs.json`, `articles_binary.csv`). The script is idempotent: existing
+files are skipped.
+
+Two datasets are **not** fetched by the script and ship committed only:
+
+- `newsmtsc/` — NewsMTSC train + devtest splits (see `data/newsmtsc/readme.md` for sources)
+- `cascade_test/` — the live-headline corpus and gold labels (produced by `src/cascade_eval.py`,
+  whose RSS cache doubles as the raw data)
 
 ## How to regenerate the derived file
 

@@ -2,9 +2,8 @@
 
 Unit tests for the feature extractor and other modules.
 
-Run with:
+Run with (from the repo root):
 ```bash
-cd /tmp/letter-valence-research
 python -m pytest tests/ -v
 # or, without pytest:
 python -m unittest discover tests/ -v

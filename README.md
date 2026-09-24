@@ -74,6 +74,8 @@ contribute ~ nothing. Exact formulas: docstrings in `src/features.py`.
 ```
 letter-valence-research/
 ├── src/            ← features, training, evaluation, figures, cascade eval, sentiment_engine/
+├── api/            ← FastAPI app behind the live Vercel demo (attribution, cheap tier)
+├── scripts/        ← regenerate_permutation.py, train_cheap_tier.py
 ├── data/           ← FPB sentences, Warriner norms, CMUdict, NewsMTSC, cascade_test/
 ├── results/        ← CV tables, cascade + general-news benchmarks (JSON/CSV)
 ├── figures/        ← 19 PNGs (300 dpi) + animations/

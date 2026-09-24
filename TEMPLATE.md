@@ -5,6 +5,8 @@
 > **Validated**: 2026-08-05 on the letter-valence-research project (68 letter-derived features, 0.7377 CV accuracy, 53 files, 15.7 MB, fully reproducible end-to-end).
 >
 > **For LLM agents**: if you are about to package a research project for public release, read this top to bottom. The 5-layer structure, the 10 mandatory files, and the 18-item checklist will catch the most common omissions.
+>
+> **Where this repo has outgrown the template (2026-09-25)**: the repo itself now exceeds several template rules — 19 figures (the "8-figure standard" is a floor for a *new* project, not a ceiling once a project grows), no `arxiv_paper.*` / `linkedin_post.md` (untracked as personal drafts; TEMPLATE keeps them for generic use), and the production sentiment engine now lives in-repo (`src/sentiment_engine/`) rather than in a separate deployed component. The template is generic guidance; treat this repo's current state as the reference for what "grown past the standard" looks like.
 
 ---
 
