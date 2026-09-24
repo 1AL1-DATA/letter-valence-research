@@ -2,15 +2,15 @@ Dual licence — applies to different parts of this repository.
 
 # === Prose, figures, and documentation ===
 # All files under / that are NOT code (i.e. README.md, blog_post.md,
-# research_report.md, lit_digest.md, linkedin_post.md, docs/, figures/,
-# arxiv_paper.tex, and all .md files in /) are licensed under:
+# research_report.md, lit_digest.md, docs/, figures/, and all .md files
+# in /) are licensed under:
 #
 # Creative Commons Attribution 4.0 International (CC BY 4.0)
 # https://creativecommons.org/licenses/by/4.0/
 
 # === Code and data download scripts ===
-# All files under src/, tests/, and the file data/download.sh are
-# licensed under:
+# All files under src/, api/, scripts/, tests/, and the file
+# data/download.sh are licensed under:
 #
 # MIT License
 #

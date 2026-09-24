@@ -107,10 +107,34 @@ deployed component: the sentiment cascade used by
   heavy tiers (FinancialBERT vs a general-domain transformer). Findings: the cheap tier
   transfers out of finance (0.42), the finance-tuned heavy collapses on general news
   (0.30), and a cascade with a general heavy beats heavy-only (0.62 vs 0.58).
-- Inputs: `data/newsmtsc/*.jsonl` + the `esg-dashboard` sentiment_engine components.
+- Inputs: `data/newsmtsc/*.jsonl` + the `esg-dashboard` sentiment_engine components
+  (imported via `ESG_DASHBOARD_SRC` when running against the dashboard checkout).
   Outputs: `results/cascade_benchmark.json`, `results/general_news_benchmark.json`,
   `results/*_predictions.csv`, `figures/cascade_sentiment_eval.png`,
   `figures/general_news_eval.png`.
+
+## The shipped sentiment engine (in-repo, 2026-09-25)
+
+The cascade is no longer only a separate deployed component: the engine is
+**vendored into this repo** at `src/sentiment_engine/` and is now the canonical
+implementation.
+
+- `src/sentiment_engine/engine.py` — the shipped 2-tier cascade (word cheap tier
+  from `assets/cheap_tier.pkl` + [VADER, keyword] extras → logistic, fires at
+  |v| ≥ 0.6 → FinancialBERT heavy tier with memory-budgeted batching → VADER →
+  keyword fallback). Same valence convention as the benchmarks
+  (v = p_pos − p_neg, quadratic score, ±0.1 label band).
+- `src/sentiment_engine/legacy_engine.py` — the deprecated 3-tier letter cascade
+  (DFT probe → letter RF → heavy), kept for side-by-side evaluation only.
+- `src/cascade_eval.py` — live-headline harness: fetches Google News RSS headlines
+  (cached in `data/cascade_test/`), fires every tier on every headline against the
+  LLM-judge gold labels, runs fixed-gate + CV-stacker ensembles and band sweeps,
+  and writes `data/cascade_test/sentiment_cascade_results.csv`.
+- `src/figures_headline.py` — 4-panel findings figure
+  (`figures/headline_gold_findings.png`).
+- Key live-headline result (240 headlines): legacy letter tiers fire 0 times at
+  their shipped bands; the word tier fires 6.7% at 81.2% precision; a 5-signal CV
+  stacker reaches 58.3% vs 51.2% for the best single signal (oracle 80.4%).
 
 ## Extension points
 
