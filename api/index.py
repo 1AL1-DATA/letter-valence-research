@@ -103,6 +103,7 @@ INDEX_HTML = """<!doctype html>
       <summary>How it works · formulas · papers</summary>
       <p><b>The problem.</b> Transformers are accurate but slow and costly, yet a third of financial sentences are obvious — "record profits, beating expectations" needs no deep model. This tier answers those on the cheap and sends only the hard ones upstairs.</p>
       <p><b>The method.</b> Rare, telling words get heavy weights (TF-IDF), plus VADER's gut feeling and a keyword checklist as extra hints, all voted on by a logistic regression. It outputs a valence <code>v = P(positive) − P(negative)</code> and decides only when <code>|v| ≥ 0.6</code>, otherwise it defers.</p>
+      <p><b>How it learns.</b> Logistic regression learns one weight per word-pattern from thousands of labeled financial sentences: it nudges the weights (maximum likelihood) until its predicted probabilities match the human labels — "surge" drifts positive, "miss" drifts negative. TF-IDF itself isn't learned, just counted (how rare each phrase is in training); the keyword checklist is hand-picked, not learned.</p>
       <p><b>How to read the output.</b> The bars are the vote shares; the pin is <code>v</code>. A pin past ±0.6 means the tier decided itself — on such cases it hits ~97% on financial sentences, ~81% on live headlines.</p>
       <p><b>The formula.</b> <code>tf-idf(t,d) = tf(t,d) × log(N/df(t))</code> → <code>P(y|x) = softmax(Wx+b)</code> → <code>score = sign(v)·v²</code>, neutral band ±0.1.</p>
       <p><b>Take-home.</b> Word counting resolves the easy third; everything else falls through.</p>
@@ -124,6 +125,7 @@ INDEX_HTML = """<!doctype html>
       <summary>How it works · formulas · papers</summary>
       <p><b>The problem.</b> Does spelling itself carry feeling, even when a model never learns what words mean? Linguists call this sound symbolism — this tier is the experiment that tests it.</p>
       <p><b>The method.</b> 68 spelling statistics per word (letter positions, rhythms in the letter sequence, sounds, number games), averaged across your text into 272 numbers, voted on by 100 decision trees. The attribution bars show how much <code>P(positive)</code> moves when each statistic is reset to average.</p>
+      <p><b>How it learns.</b> Random Forest learns through ensemble learning: it combines many decision trees to improve accuracy and reduce overfitting, using two sources of randomness. <b>Bootstrap sampling (bagging):</b> the training set is sampled with replacement into many unique subsets, one tree per subset, so each tree sees different data variations. <b>Random feature selection:</b> at every node split only a random subset of features is considered, which decorrelates the trees and forces different patterns. <b>Aggregation:</b> the forest predicts by majority vote of its 100 trees.</p>
       <p><b>How to read the output.</b> 71% confidence here means far less than it looks: ~0.74 accuracy vs a 0.69 baseline, and no better than chance on long texts. Read it as a research artifact for comparison, never as a decision.</p>
       <p><b>The formula.</b> <code>P(pos) = (1/100)·Σ tree_vote</code> → <code>attr = P − P(feature := mean)</code>.</p>
       <p><b>Take-home.</b> Spelling whispers; meaning speaks — the production cascade retired this tier.</p>
@@ -150,6 +152,7 @@ INDEX_HTML = """<!doctype html>
       <summary>How it works · formulas · papers</summary>
       <p><b>The problem.</b> Every system needs a referee that always answers — no training, no servers, no overfitting — plus a last resort when heavier models are offline.</p>
       <p><b>The method.</b> A human-written rulebook: look up each word's mood score, then adjust — NOT flips signs, SHOUTING and !!! amplify, "but" shifts weight to what follows. It knows nothing about finance, so "beat" and "miss" confuse it.</p>
+      <p><b>How it learns.</b> It doesn't — not from your text, anyway. All learning happened once, in 2014: humans rated thousands of words, emoticons and slang for mood, and the authors froze that into a dictionary plus grammar rules. What runs here is pure lookup-and-adjust, identical every time. That frozen knowledge is why VADER is always available and never overfits — and why it goes blind on finance jargon born after its dictionary.</p>
       <p><b>How to read the output.</b> Compound near ±1 is emphatic; near 0 is a shrug. Trust it most past ±0.6 (~79%+ precision there); near zero, treat as abstain, not as positive.</p>
       <p><b>The formula.</b> <code>compound = x / √(x² + 15)</code>, where <code>x</code> = rule-adjusted valence sum; label ±0.05 band (else neutral).</p>
       <p><b>Take-home.</b> A reliable fallback and second opinion — never the judge.</p>
