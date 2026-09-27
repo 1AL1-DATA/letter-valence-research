@@ -162,10 +162,13 @@ The fold split uses `random_state=42` for reproducibility.
 
 To verify that the observed accuracy is not a fluke of the particular choice of features and dataset, we run a label-shuffling permutation test:
 1. Compute the observed accuracy on the real labels.
-2. Shuffle the labels 50 times; for each shuffled set, re-run the same 5-fold CV.
-3. Report the null distribution (mean, std, percentiles) and the p-value: P[null ≥ observed].
+2. Shuffle the labels 999 times; for each shuffled set, re-run the same 5-fold CV.
+3. Report the null distribution (mean, std, percentiles) and the p-value with the
+   standard add-one estimator (Phipson & Smyth 2010): (count of null runs ≥ observed + 1) / (n_perm + 1).
+   A finite Monte-Carlo test cannot resolve p below 1/(n_perm + 1), so a raw
+   count-based estimator must never print p = 0.
 
-This is the strongest test of statistical significance available without holding out a separate test set. The result was **p = 0.0000** (no shuffled-label run beat the real run; the real accuracy of 0.738 was 13.8 standard deviations above the null mean of 0.679).
+This is the strongest test of statistical significance available without holding out a separate test set. The result was **p ≈ 0.001** (999 shuffles, add-one estimator; no shuffled-label run beat the real run — the real accuracy of 0.738 was 13.8 standard deviations above the null mean of 0.679).
 
 ### Learning curve (bias-variance decomposition)
 
@@ -411,6 +414,6 @@ The generalisation result is that the **cascade approach** — cheap word tier +
 ## What the headline number DOES mean
 
 - A model trained on **only letter features** can reach ~74% accuracy on FPB binary sentiment.
-- This is significantly above chance (p < 0.0001) and significantly above a linear baseline (logistic regression: 0.71, ridge: 0.72).
+- This is significantly above chance (permutation test, 999 shuffles, p ≈ 0.001) and significantly above a linear baseline (logistic regression: 0.71, ridge: 0.72).
 - The signal is real but small. The formula is best used as a fast pre-filter or a second opinion, not a primary sentiment classifier.
 - The bottleneck for further improvement is **features**, not data — the learning curve plateaus around n=1,376, well below the 1,967 article full dataset.

@@ -10,7 +10,7 @@ So I sat down to answer it. This post is what I found, and what it means.
 
 ## TL;DR
 
-A random forest trained on **68 features computed purely from the letters of each word** — alphabet position, modular arithmetic, bigram statistics, vowel ratios, phonetic features from CMUdict, spectral (Fourier) analysis, compression statistics — reaches **0.7377 ± 0.0058 accuracy** on the FinancialPhraseBank binary sentiment task (1,967 financial sentences labeled positive or negative). That's significantly above the 0.693 class-prior baseline (permutation test, p < 0.0001) and it beats VADER at its default threshold. It does *not* beat a properly-tuned VADER, and it does *not* beat FinBERT. It runs at 50,000 articles per second on a single CPU core.
+A random forest trained on **68 features computed purely from the letters of each word** — alphabet position, modular arithmetic, bigram statistics, vowel ratios, phonetic features from CMUdict, spectral (Fourier) analysis, compression statistics — reaches **0.7377 ± 0.0058 accuracy** on the FinancialPhraseBank binary sentiment task (1,967 financial sentences labeled positive or negative). That's significantly above the 0.693 class-prior baseline (permutation test, 999 shuffles, p ≈ 0.001) and it beats VADER at its default threshold. It does *not* beat a properly-tuned VADER, and it does *not* beat FinBERT. It runs at 50,000 articles per second on a single CPU core.
 
 The interesting finding is **where the signal lives**: not in the modular arithmetic (the "gematria" idea — A=1, B=2, sum mod 9, etc.) but in the **spectral domain**. The Discrete Fourier Transform of the letter-position sequence is the single strongest feature family, and the gematria-style features all fail to reach statistical significance. This was a surprise to me — I went in expecting modular arithmetic to be the natural thing to test.
 
@@ -118,7 +118,7 @@ Everything is open:
 - **Notebook walkthrough**: `notebooks/01_reproduce_main_result.ipynb`
 - **Tests**: 33 unit tests, all passing in ~1.7s
 - **Cascade eval**: `python -m src.benchmark_cascade` (FPB) and `python -m src.benchmark_general` (general news / NewsMTSC)
-- **Headline result**: 5-fold CV 0.7377 ± 0.0058 (F1=0.835), held-out 20% 0.751, p < 0.0001
+- **Headline result**: 5-fold CV 0.7377 ± 0.0058 (F1=0.835), held-out 20% 0.751, p ≈ 0.001 (999-shuffle permutation test)
 
 The repository is dual-licensed: MIT for code, CC-BY-4.0 for prose and figures. The data is from open-access sources (Warriner 2013, Malo et al. 2014, CMUdict, dwyl/english-words). Cite the underlying datasets if you use the work.
 

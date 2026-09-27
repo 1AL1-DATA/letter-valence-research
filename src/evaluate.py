@@ -169,7 +169,9 @@ def permutation_test(
         )
         null_accs.append(res["accuracy_mean"])
     null = np.array(null_accs)
-    p_value = float((null >= observed_acc).mean())
+    # Add-one (Phipson & Smyth 2010): a finite Monte-Carlo permutation test can
+    # never support p = 0; (count + 1) / (n_perm + 1) is the standard estimator.
+    p_value = float((int((null >= observed_acc).sum()) + 1) / (len(null) + 1))
     return {
         "observed_accuracy": float(observed_acc),
         "n_permutations": n_perm,

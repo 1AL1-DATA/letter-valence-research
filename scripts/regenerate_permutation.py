@@ -1,10 +1,12 @@
-"""Regenerate results/permutation_test.json with the documented 50 label shuffles.
+"""Regenerate results/permutation_test.json with 999 label shuffles.
 
-The committed artifact was generated with n_perm=5 (an override of the code
-default of 50), while README.md, research_report.md and arxiv_paper.tex all
-describe a permutation test with 50 shuffles. This script reruns the same
-permutation test used in src/analyze.py STEP 6 with the documented default and
-rewrites permutation_test.json and the permutation_test block of summary.json.
+History: the committed artifact was first generated with n_perm=5, later
+regenerated with the documented default of 50. Both used the raw
+(count/n_perm) estimator, which printed p_value = 0.0 — a claim a finite
+Monte-Carlo test cannot support (resolution floor is 1/(n_perm + 1)).
+This script reruns the permutation test with n_perm=999 and the add-one
+estimator (Phipson & Smyth 2010) and rewrites permutation_test.json and the
+permutation_test block of summary.json.
 
 Usage:
     python -m scripts.regenerate_permutation
@@ -34,10 +36,10 @@ def main() -> None:
         f"F1={random_b['f1']:.4f}"
     )
 
-    print("Running permutation test with n_perm=50 ...")
+    print("Running permutation test with n_perm=999 ...")
     perm = permutation_test(
         articles, y, observed_acc=0.737673241110293,
-        model_name="rf", n_perm=50, n_splits=5, seed=42,
+        model_name="rf", n_perm=999, n_splits=5, seed=42,
     )
     print(f"  Observed accuracy: {perm['observed_accuracy']:.4f}")
     print(f"  Null mean +/- std: {perm['null_mean']:.4f} +/- {perm['null_std']:.4f}")

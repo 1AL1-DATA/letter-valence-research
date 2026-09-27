@@ -12,7 +12,7 @@
 
 Can the letters of an English word predict its sentiment? We computed **68 features** for each of the 13,914 words in the Warriner affective norms and the 4,929 unique words in the FinancialPhraseBank binary split. Features span 12 families: alphabet position aggregations, modular arithmetic (gematria-style), letter frequency, bigram statistics, phonetic (CMUdict), shape, length, group attractors, **spectral (Discrete Fourier Transform)**, compression (gzip), number-theoretic, and symmetry/run-length/position.
 
-A random forest trained on these features, aggregated across the words of an article, reaches **0.7377 ± 0.0058 5-fold CV accuracy (F1 = 0.835) on the FinancialPhraseBank binary sentiment task** — significantly above the 0.693 class-prior baseline (permutation test, 50 shuffles, **p < 0.0001**). A **held-out 20% test** confirms the estimate: 0.751 accuracy. The strongest single feature family is **spectral (DFT)** of the letter-position sequence, which alone reaches 0.7346 accuracy. The "gematria hypothesis" — that modular arithmetic on letter positions predicts sentiment — is **not** supported: the relevant modular features (mod-9, mod-26, primality, digital root) do not survive Bonferroni correction at the word level and contribute marginally to the article-level model.
+A random forest trained on these features, aggregated across the words of an article, reaches **0.7377 ± 0.0058 5-fold CV accuracy (F1 = 0.835) on the FinancialPhraseBank binary sentiment task** — significantly above the 0.693 class-prior baseline (permutation test, 999 shuffles, **p ≈ 0.001**). A **held-out 20% test** confirms the estimate: 0.751 accuracy. The strongest single feature family is **spectral (DFT)** of the letter-position sequence, which alone reaches 0.7346 accuracy. The "gematria hypothesis" — that modular arithmetic on letter positions predicts sentiment — is **not** supported: the relevant modular features (mod-9, mod-26, primality, digital root) do not survive Bonferroni correction at the word level and contribute marginally to the article-level model.
 
 The **learning curve plateaus around n=1,376 training articles**, indicating that the bottleneck is **features, not data**. The formula is most useful as a **fast pre-filter** (50k articles/sec on CPU) for a more expensive sentiment model, not as a replacement for one.
 
@@ -88,7 +88,7 @@ Random Forest Classifier with `n_estimators=100`, `random_state=42`, `n_jobs=-1`
 
 **5-fold stratified cross-validation** with `random_state=42`. Implementation: `src/evaluate.py::cross_validate`. Each fold is a 80/20 train/test split; the reported accuracy and F1 are the mean and standard deviation across the 5 folds.
 
-**Permutation test** (50 shuffles): shuffle the labels, re-run the same 5-fold CV, compare null distribution to observed. Implementation: `src/evaluate.py::permutation_test`. This is the strongest available test of statistical significance without holding out a separate test set.
+**Permutation test** (999 shuffles, add-one estimator): shuffle the labels, re-run the same 5-fold CV, compare null distribution to observed. The add-one form (Phipson & Smyth 2010) keeps the p-value at or above its Monte-Carlo resolution floor of 1/(n_perm + 1). Implementation: `src/evaluate.py::permutation_test`. This is the strongest available test of statistical significance without holding out a separate test set.
 
 **Learning curve** (bias-variance decomposition): train on 10%, 20%, 30%, 50%, 70%, 90%, 100% of the 1,967 articles. Shows the data-size vs. accuracy frontier. Implementation: `src/evaluate.py::learning_curve`.
 
@@ -149,7 +149,7 @@ Full table: `results/word_level_correlations.csv`.
 | VADER (lexicon, threshold -0.05) | 0.750 | 0.840 | +0.057 |
 | FinBERT (BERT-base, finance-tuned, from literature) | ~0.87 | ~0.87 | +0.18 |
 
-**Permutation test** (50 shuffles): p < 0.0001. The real accuracy is 13.8 standard deviations above the null mean of 0.679 ± 0.004. The null distribution never exceeds 0.691.
+**Permutation test** (999 shuffles): p ≈ 0.001. The real accuracy is 13.8 standard deviations above the null mean of 0.679 ± 0.004. The null distribution never exceeds 0.691.
 
 ### 4.3 Bias-variance decomposition (learning curve)
 

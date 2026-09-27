@@ -2,7 +2,7 @@
 numpy>=1.24
 scipy>=1.10
 pandas>=2.0
-scikit-learn>=1.3
+scikit-learn==1.9.0  # ponytail: pinned to match pickled models; bump only with retrain
 
 # Sentiment baseline
 vaderSentiment>=3.3.2

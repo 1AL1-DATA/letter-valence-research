@@ -170,6 +170,7 @@ def vader_score(text: str) -> dict:
 
     Threshold 0: compound >= 0 -> positive, else negative.
     Threshold -0.05 (tuned for FPB): compound >= -0.05 -> positive, else negative.
+    Standard VADER band: >= +0.05 positive, <= -0.05 negative, else neutral.
     """
     try:
         from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
@@ -177,13 +178,16 @@ def vader_score(text: str) -> dict:
         return {"error": "vaderSentiment not installed"}
     analyzer = SentimentIntensityAnalyzer()
     scores = analyzer.polarity_scores(text)
+    compound = scores["compound"]
     return {
-        "compound": scores["compound"],
+        "compound": compound,
         "neg": scores["neg"],
         "neu": scores["neu"],
         "pos": scores["pos"],
-        "label_default": "positive" if scores["compound"] >= 0 else "negative",
-        "label_tuned": "positive" if scores["compound"] >= -0.05 else "negative",
+        "label_default": "positive" if compound >= 0 else "negative",
+        "label_tuned": "positive" if compound >= -0.05 else "negative",
+        # ponytail: standard band; near-zero is abstain, never positive
+        "label": "positive" if compound >= 0.05 else ("negative" if compound <= -0.05 else "neutral"),
     }
 
 
@@ -208,6 +212,7 @@ def _print_result(result: dict, compare: bool = False, fp=sys.stdout) -> None:
             print(f"  VADER compound: {v['compound']:+.3f}", file=fp)
             print(f"  VADER default:  {v['label_default']}", file=fp)
             print(f"  VADER tuned:    {v['label_tuned']}", file=fp)
+            print(f"  VADER banded:   {v['label']}", file=fp)
     print(file=fp)
 
 

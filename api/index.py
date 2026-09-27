@@ -70,6 +70,10 @@ INDEX_HTML = """<!doctype html>
   .chip { display:inline-block; padding:.15rem .5rem; margin:.15rem .2rem 0 0; border-radius:999px; font:12px system-ui; }
   .chip.pos { background:#dcfce7; color:#15803d; } .chip.neg { background:#fee2e2; color:#b91c1c; }
   .chips-label { font-size:12px; color:#6b7280; margin-top:.5rem; }
+  details.model-info { margin:.6rem 0 .2rem; font:13px/1.55 system-ui; color:#374151; background:#f8fafc; border:1px solid #e5e7eb; border-radius:8px; padding:.45rem .7rem; }
+  details.model-info summary { cursor:pointer; font-weight:600; color:var(--accent); }
+  details.model-info p { margin:.4rem 0; }
+  details.model-info a { color:var(--accent); }
   .grid { display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; margin-top:1rem; }
   @media (max-width:560px){ .grid { grid-template-columns:1fr; } }
   table { width:100%; border-collapse:collapse; font:13px system-ui; }
@@ -95,6 +99,15 @@ INDEX_HTML = """<!doctype html>
 
   <div id="result" class="card">
     <div style="font-weight:700;font-size:16px;margin-bottom:.4rem;">Word-level model <span style="font-weight:400;font-size:13px;color:#6b7280;">(TF-IDF + VADER + keywords)</span></div>
+    <details class="model-info">
+      <summary>How it works · formulas · papers</summary>
+      <p><b>The problem.</b> Transformers are accurate but slow and costly, yet a third of financial sentences are obvious — "record profits, beating expectations" needs no deep model. This tier answers those on the cheap and sends only the hard ones upstairs.</p>
+      <p><b>The method.</b> Rare, telling words get heavy weights (TF-IDF), plus VADER's gut feeling and a keyword checklist as extra hints, all voted on by a logistic regression. It outputs a valence <code>v = P(positive) − P(negative)</code> and decides only when <code>|v| ≥ 0.6</code>, otherwise it defers.</p>
+      <p><b>How to read the output.</b> The bars are the vote shares; the pin is <code>v</code>. A pin past ±0.6 means the tier decided itself — on such cases it hits ~97% on financial sentences, ~81% on live headlines.</p>
+      <p><b>The formula.</b> <code>tf-idf(t,d) = tf(t,d) × log(N/df(t))</code> → <code>P(y|x) = softmax(Wx+b)</code> → <code>score = sign(v)·v²</code>, neutral band ±0.1.</p>
+      <p><b>Take-home.</b> Word counting resolves the easy third; everything else falls through.</p>
+      <p><b>Papers:</b> Sparck Jones 1972 (<a href="https://doi.org/10.1108/eb026526" target="_blank" rel="noopener">doi.org/10.1108/eb026526</a>) · Hutto &amp; Gilbert 2014 (<a href="https://ojs.aaai.org/index.php/ICWSM/article/view/14550" target="_blank" rel="noopener">ICWSM proceedings</a>) · the word-stacking itself is our design — see METHODOLOGY.md in the <a href="https://github.com/1AL1-DATA/letter-valence-research" target="_blank" rel="noopener">repo</a>.</p>
+    </details>
     <div id="cheap-verdict" class="label" style="font-size:1.2rem;"></div>
     <div class="meter"><div class="mid"></div><div class="pin" id="cheap-pin" style="left:50%"></div></div>
     <div class="scale"><span>negative</span><span>neutral</span><span>positive</span></div>
@@ -106,7 +119,16 @@ INDEX_HTML = """<!doctype html>
 
     <hr style="border:none;border-top:1px solid #e5e7eb;margin:1.1rem 0;">
 
-    <div style="font-weight:700;font-size:16px;margin-bottom:.4rem;">Letter-feature model <span style="font-weight:400;font-size:13px;color:#6b7280;">(RandomForest)</span></div>
+    <div style="font-weight:700;font-size:16px;margin-bottom:.4rem;">Letter-feature model <span style="font-weight:400;font-size:13px;color:#6b7280;">(RandomForest)</span> <span style="font-weight:600;font-size:12px;color:#b45309;background:#fef3c7;border-radius:999px;padding:.1rem .5rem;">research artifact — not a decision-maker</span></div>
+    <details class="model-info">
+      <summary>How it works · formulas · papers</summary>
+      <p><b>The problem.</b> Does spelling itself carry feeling, even when a model never learns what words mean? Linguists call this sound symbolism — this tier is the experiment that tests it.</p>
+      <p><b>The method.</b> 68 spelling statistics per word (letter positions, rhythms in the letter sequence, sounds, number games), averaged across your text into 272 numbers, voted on by 100 decision trees. The attribution bars show how much <code>P(positive)</code> moves when each statistic is reset to average.</p>
+      <p><b>How to read the output.</b> 71% confidence here means far less than it looks: ~0.74 accuracy vs a 0.69 baseline, and no better than chance on long texts. Read it as a research artifact for comparison, never as a decision.</p>
+      <p><b>The formula.</b> <code>P(pos) = (1/100)·Σ tree_vote</code> → <code>attr = P − P(feature := mean)</code>.</p>
+      <p><b>Take-home.</b> Spelling whispers; meaning speaks — the production cascade retired this tier.</p>
+      <p><b>Papers:</b> Breiman 2001 (<a href="https://doi.org/10.1023/A:1010933404324" target="_blank" rel="noopener">doi.org/10.1023/A:1010933404324</a>) · the 68-feature study: repo paper §Results in the <a href="https://github.com/1AL1-DATA/letter-valence-research" target="_blank" rel="noopener">repo</a>.</p>
+    </details>
     <div id="verdict" class="label"></div>
     <div class="meter"><div class="mid"></div><div class="pin" id="letter-pin" style="left:50%"></div></div>
     <div class="scale"><span>negative</span><span>neutral</span><span>positive</span></div>
@@ -124,6 +146,15 @@ INDEX_HTML = """<!doctype html>
 
   <div id="vader-card" class="card" style="display:none;">
     <div style="font-weight:700;font-size:16px;margin-bottom:.4rem;">VADER baseline <span style="font-weight:400;font-size:13px;color:#6b7280;">(lexical rule-based)</span></div>
+    <details class="model-info">
+      <summary>How it works · formulas · papers</summary>
+      <p><b>The problem.</b> Every system needs a referee that always answers — no training, no servers, no overfitting — plus a last resort when heavier models are offline.</p>
+      <p><b>The method.</b> A human-written rulebook: look up each word's mood score, then adjust — NOT flips signs, SHOUTING and !!! amplify, "but" shifts weight to what follows. It knows nothing about finance, so "beat" and "miss" confuse it.</p>
+      <p><b>How to read the output.</b> Compound near ±1 is emphatic; near 0 is a shrug. Trust it most past ±0.6 (~79%+ precision there); near zero, treat as abstain, not as positive.</p>
+      <p><b>The formula.</b> <code>compound = x / √(x² + 15)</code>, where <code>x</code> = rule-adjusted valence sum; label ±0.05 band (else neutral).</p>
+      <p><b>Take-home.</b> A reliable fallback and second opinion — never the judge.</p>
+      <p><b>Paper:</b> Hutto &amp; Gilbert 2014 (<a href="https://ojs.aaai.org/index.php/ICWSM/article/view/14550" target="_blank" rel="noopener">ICWSM proceedings</a>).</p>
+    </details>
     <div id="vader-verdict" class="label" style="font-size:1.2rem;"></div>
     <div class="meter"><div class="mid"></div><div class="pin" id="vader-pin" style="left:50%"></div></div>
     <div class="scale"><span>negative</span><span>neutral</span><span>positive</span></div>
@@ -191,9 +222,9 @@ async function classify() {
     // ---- VADER baseline ----
     document.getElementById('vader-card').style.display = 'block';
     const vv = document.getElementById('vader-verdict');
-    vv.textContent = d.vader.label_default.toUpperCase() +
+    vv.textContent = d.vader.label.toUpperCase() +
       '  (compound ' + d.vader.compound.toFixed(3) + ')';
-    vv.className = 'label ' + d.vader.label_default;
+    vv.className = 'label ' + d.vader.label;
     setPin('vader-pin', Math.max(-1, Math.min(1, d.vader.compound)));
     setHist('vn', 'vnv', d.vader.neg);
     setHist('vu', 'vuv', d.vader.neu);

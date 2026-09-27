@@ -15,7 +15,7 @@ Test @ [https://letter-valence-research-git-main-name-a0b0.vercel.app/](https://
 | Question | Answer |
 |---|---|
 | How good? | 0.7377 5-fold CV, 0.751 held-out (majority baseline 0.693) |
-| Noise? | permutation test: 0/50 label shuffles beat it (p < 0.02) |
+| Noise? | permutation test: 999 label shuffles, none beat the real score (p ≈ 0.001) |
 | Better than existing tools? | No — tuned VADER 0.750, FinBERT ~0.87 |
 | Strongest family | spectral DFT alone 0.7346; strongest feature `vowel_ratio` (r = +0.049) |
 | Do the numerology features work? | No — none survive Bonferroni; dropping the modular family leaves 0.7422 |
