@@ -67,3 +67,6 @@ arxiv_paper.pdf
 *.tmp
 .pytest_cache/
 .coverage
+# venv lives physically outside this folder; see .venv-NOTE.md (2026-11-08)
+.venv
+.venv-NOTE.md
